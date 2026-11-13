@@ -1,0 +1,59 @@
+{% extends "guardianwebapp/base.html" %}
+{% block content %}
+<div class="card" style="background:white;padding:15px;margin:15px;border-radius:10px;box-shadow:0px 0px 5px grey; max-width:500px; margin:20px auto; font-family:'Segoe UI',sans-serif;">
+
+    <h3>🚨 Current Requests</h3>
+    {% if pending_requests %}
+        {% for cr in pending_requests %}
+        <div style="border:1px solid #eee; border-radius:8px; padding:12px; margin:10px 0;">
+            <h4>{{ cr.user.username }}</h4>
+            <p style="font-size:12px; color:#888;">Requested: {{ cr.requested_at|date:"M d, Y, g:i A" }}</p>
+            <form method="POST" action="{% url 'join_companion_session' cr.id %}">
+                {% csrf_token %}
+                <button type="submit" style="padding:8px 16px; background:#4b49ac; color:white; border:none; border-radius:6px; cursor:pointer;">
+                    Join Session
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#888; font-size:13px;">No pending requests right now.</p>
+    {% endif %}
+
+    <h3 style="margin-top:24px;">✅ My Active Sessions</h3>
+    {% if active_requests %}
+        {% for cr in active_requests %}
+        <div style="border:1px solid #eee; border-radius:8px; padding:12px; margin:10px 0; background:#f4f6fb;">
+            <h4>{{ cr.user.username }}</h4>
+            <p style="font-size:12px; color:#888;">Joined: {{ cr.accepted_at|date:"M d, Y, g:i A" }}</p>
+            <a href="{% url 'companion_chat' cr.id %}" style="display:inline-block; padding:8px 16px; background:#2f9e44; color:white; border-radius:6px; text-decoration:none;">
+                Open Chat
+            </a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#888; font-size:13px;">No active sessions.</p>
+    {% endif %}
+
+    <h3 style="margin-top:24px;">📜 History</h3>
+    {% if history_requests %}
+        {% for cr in history_requests %}
+        <div style="border:1px solid #eee; border-radius:8px; padding:10px; margin:8px 0; background:#f9f9f9; font-size:13px;">
+            <strong>{{ cr.user.username }}</strong> —
+            {% if cr.status == "AI_Mode" %}
+                <span style="color:#999;">Not joined (expired, switched to AI)</span>
+            {% elif cr.status == "Completed" %}
+                <span style="color:#2f9e44;">Completed</span>
+            {% else %}
+                <span style="color:#e03131;">{{ cr.status }}</span>
+            {% endif %}
+            <div style="font-size:11px; color:#aaa;">{{ cr.requested_at|date:"M d, Y, g:i A" }}</div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#888; font-size:13px;">No history yet.</p>
+    {% endif %}
+
+    <a href="{% url 'volunteer_dashboard' %}" style="display:block; margin-top:20px;">← Back to Dashboard</a>
+</div>
+{% endblock %}

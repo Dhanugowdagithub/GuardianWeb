@@ -1,0 +1,94 @@
+{% extends "guardianwebapp/base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<div class="card sos-confirmation">
+    <div class="icon-badge">🆘</div>
+    <h2>SOS ALERT ACTIVATED</h2>
+    <p class="subtitle">Your emergency alert has been sent successfully.</p>
+
+    <hr>
+
+    <h3>Alert Details</h3>
+    <p><strong>Status:</strong> Emergency Alert Sent</p>
+    <p id="sosEscalationStatus" aria-live="polite">Checking for a response...</p>
+    <p><strong>Date &amp; Time:</strong> {{ alert_time|date:"M d, Y, g:i A" }}</p>
+    <p><strong>Location:</strong> {{ location }}</p>
+
+    <div id="sosMap" style="height:250px; width:100%; border-radius:8px; margin:12px 0;"></div>
+
+    <hr>
+
+    <h3>Guardians Notified</h3>
+    <ul style="list-style:none; padding:0;">
+        {% for g in guardians %}
+            <li style="display:flex; align-items:center; gap:8px; padding:6px 0;">
+                <span style="width:10px; height:10px; border-radius:50%; background:{% if g.is_online %}#3B6D11{% else %}#999{% endif %};"></span>
+                {{ g.name }} — {{ g.status }}
+            </li>
+        {% empty %}
+            <li>✅ No guardians configured for this account</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Volunteers</h3>
+    <ul style="list-style:none; padding:0;">
+        {% for v in volunteers %}
+            <li style="display:flex; align-items:center; gap:8px; padding:6px 0;">
+                <span style="width:10px; height:10px; border-radius:50%; background:{% if v.is_online %}#3B6D11{% else %}#999{% endif %};"></span>
+                {{ v.name }} {% if v.is_available %}(Available){% else %}(Busy){% endif %}
+            </li>
+        {% empty %}
+            <li>No registered volunteers found</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'user_dashboard' %}" class="dashboard-btn">Back to Dashboard</a>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const lat = {{ latitude }};
+const lng = {{ longitude }};
+const sosStatusUrl = "{% url 'sos_status' alert.id %}";
+
+const map = L.map('sosMap').setView([lat, lng], 16);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+L.marker([lat, lng]).addTo(map).bindPopup("SOS triggered here").openPopup();
+
+const escalationStatus = document.getElementById("sosEscalationStatus");
+
+async function checkSosStatus() {
+    try {
+        const response = await fetch(sosStatusUrl);
+        if (!response.ok) {
+            throw new Error("Status request failed");
+        }
+
+        const result = await response.json();
+        if (result.state === "police" && result.url) {
+            window.location.assign(result.url);
+            return;
+        }
+        if (result.state === "handled") {
+            escalationStatus.textContent = "A guardian or volunteer has accepted the alert.";
+            return;
+        }
+        escalationStatus.textContent = `Waiting for a response. Police escalation in ${result.seconds_left} seconds.`;
+    } catch (error) {
+        escalationStatus.textContent = "Unable to refresh the response status. Retrying...";
+    }
+
+    window.setTimeout(checkSosStatus, 3000);
+}
+
+checkSosStatus();
+</script>
+{% endblock %}

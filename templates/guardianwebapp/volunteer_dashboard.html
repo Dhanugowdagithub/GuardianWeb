@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volunteer Dashboard</title>
+<style>
+:root {
+  --primary: #6c4bc9;
+  --primary-dark: #533a9e;
+  --safe: #2f9e44;
+  --danger: #e03131;
+  --warn: #f08c00;
+  --bg: #f5f3ff;
+  --card-bg: #ffffff;
+  --border: #e5e0f7;
+}
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
+body { background: var(--bg); min-height:100vh; }
+
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-title { font-size: 18px; font-weight: 600; }
+.hamburger {
+  background: none; border: none; color: white;
+  font-size: 26px; cursor: pointer; line-height: 1;
+}
+
+.menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; }
+.menu-overlay.open { display: block; }
+
+.side-menu {
+  position: fixed; top:0; right:-280px;
+  width: 260px; height: 100%;
+  background: white;
+  box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+  transition: right 0.25s ease;
+  z-index: 201;
+  display: flex; flex-direction: column;
+  padding: 20px 0;
+}
+.side-menu.open { right: 0; }
+.menu-item {
+  padding: 14px 22px;
+  display: flex; align-items: center; gap: 12px;
+  color: #333; text-decoration: none; font-size: 15px;
+}
+.menu-item:hover { background: var(--bg); }
+.menu-close {
+  align-self: flex-end; margin: 0 15px 10px 0;
+  background:none; border:none; font-size:22px; cursor:pointer; color:#666;
+}
+
+.container { max-width: 600px; margin: 0 auto; padding: 20px 16px 40px; }
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.card-title {
+  font-size: 15px; font-weight: 600; color: #333;
+  margin-bottom: 14px; display:flex; align-items:center; gap:8px;
+}
+
+.status-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.status-text { font-size:14px; color:#333; }
+.status-badge {
+  font-size:12px; font-weight:600; padding:5px 12px; border-radius:20px;
+}
+.badge-available { background:#e6f7ea; color:var(--safe); }
+.badge-unavailable { background:#fdeaea; color:var(--danger); }
+
+.btn-toggle {
+  flex:1; padding:11px; border:none; border-radius:8px;
+  font-size:13px; font-weight:600; cursor:pointer;
+}
+.btn-toggle-available { background:var(--safe); color:white; }
+.btn-toggle-unavailable { background:var(--danger); color:white; }
+.btn-toggle:disabled { background:#e0e0e0; color:#999; cursor:not-allowed; }
+.btn-row { display:flex; gap:10px; }
+
+.action-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+.action-btn {
+  padding:12px; border-radius:10px; text-align:center; text-decoration:none;
+  background: var(--bg); border:1px solid var(--border); color:#333;
+  font-size:13px; font-weight:600; display:flex; flex-direction:column;
+  align-items:center; gap:6px;
+}
+.action-btn:hover { background: #EEEDFE; }
+.action-icon { font-size:22px; }
+
+.location-box { display:flex; align-items:center; justify-content:space-between; }
+.location-text { font-size:13px; color:#555; }
+.location-missing { color: var(--danger); font-weight:500; }
+.btn-primary-sm {
+  padding:9px 16px; font-size:12px; border:none; border-radius:8px;
+  background: var(--primary); color:white; cursor:pointer;
+}
+.btn-primary-sm:hover { background: var(--primary-dark); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">🧑‍🤝‍🧑 Volunteer Dashboard</div>
+  <button class="hamburger" onclick="toggleMenu()">☰</button>
+</div>
+
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+<div class="side-menu" id="sideMenu">
+  <button class="menu-close" onclick="toggleMenu()">✕</button>
+  <a href="{% url 'profile_settings' %}" class="menu-item">👤 My Profile</a>
+  <a href="{% url 'volunteer_dashboard' %}" class="menu-item">🏠 Dashboard</a>
+  <a href="{% url 'volunteer_pending_requests' %}" class="menu-item">🚨 Pending Requests</a>
+  <a href="{% url 'volunteer_accepted_requests' %}" class="menu-item">✅ Accepted Requests</a>
+  <a href="{% url 'volunteer_nearby_alerts' %}" class="menu-item">📍 Nearby Alerts</a>
+  <a href="{% url 'volunteer_companion_sessions' %}" class="menu-item">🤝 Companion Sessions</a>
+  <a href="{% url 'logout' %}" class="menu-item" style="color:#e03131;">🚪 Logout</a>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">🟢 Availability Status</div>
+    <div class="status-row">
+      <div class="status-text">You are currently:</div>
+      {% if volunteer.is_available %}
+        <span class="status-badge badge-available">🟢 Available</span>
+      {% else %}
+        <span class="status-badge badge-unavailable">🔴 Unavailable</span>
+      {% endif %}
+    </div>
+
+    <form method="POST" action="{% url 'toggle_availability' %}">
+      {% csrf_token %}
+      <div class="btn-row">
+        <button type="submit" name="action" value="available"
+          {% if volunteer.is_available %}disabled{% endif %}
+          class="btn-toggle btn-toggle-available">
+          Mark Available
+        </button>
+        <button type="submit" name="action" value="unavailable"
+          {% if not volunteer.is_available %}disabled{% endif %}
+          class="btn-toggle btn-toggle-unavailable">
+          Mark Unavailable
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Quick Actions</div>
+    <div class="action-grid">
+      <a href="{% url 'volunteer_pending_requests' %}" class="action-btn">
+        <div class="action-icon">🚨</div> Pending Requests
+      </a>
+      <a href="{% url 'volunteer_accepted_requests' %}" class="action-btn">
+        <div class="action-icon">✅</div> Accepted Requests
+      </a>
+      <a href="{% url 'volunteer_nearby_alerts' %}" class="action-btn">
+        <div class="action-icon">📍</div> Nearby Alerts
+      </a>
+      <a href="{% url 'volunteer_companion_sessions' %}" class="action-btn">
+        <div class="action-icon">🤝</div> Companion Sessions
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📍 My Location</div>
+    <div class="location-box">
+      <div class="location-text">
+        {% if volunteer.latitude and volunteer.longitude %}
+          Current: {{ volunteer.latitude|floatformat:4 }}, {{ volunteer.longitude|floatformat:4 }}
+        {% else %}
+          <span class="location-missing">Not set — nearby alerts won't work until updated.</span>
+        {% endif %}
+      </div>
+      <button id="update-location-btn" class="btn-primary-sm">Update</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleMenu() {
+  document.getElementById('sideMenu').classList.toggle('open');
+  document.getElementById('menuOverlay').classList.toggle('open');
+}
+
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
+document.getElementById("update-location-btn").addEventListener("click", function () {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported on this device.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    function (position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = "{% url 'update_volunteer_location' %}";
+
+      const csrf = document.createElement("input");
+      csrf.type = "hidden";
+      csrf.name = "csrfmiddlewaretoken";
+      csrf.value = getCookie("csrftoken");
+      form.appendChild(csrf);
+
+      const latInput = document.createElement("input");
+      latInput.type = "hidden";
+      latInput.name = "latitude";
+      latInput.value = lat;
+      form.appendChild(latInput);
+
+      const lngInput = document.createElement("input");
+      lngInput.type = "hidden";
+      lngInput.name = "longitude";
+      lngInput.value = lng;
+      form.appendChild(lngInput);
+
+      document.body.appendChild(form);
+      form.submit();
+    },
+    function () {
+      alert("Could not get your location. Please enable GPS/location permissions.");
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+});
+</script>
+
+</body>
+</html>

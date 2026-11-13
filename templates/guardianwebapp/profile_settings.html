@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>My Profile</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
+body { background:#f5f3ff; min-height:100vh; }
+.header {
+  background:#6c4bc9; color:white; padding:14px 20px;
+  display:flex; align-items:center; gap:14px;
+}
+.back-btn { color:white; text-decoration:none; font-size:20px; }
+.container { max-width:480px; margin:0 auto; padding:24px 16px; }
+.card {
+  background:white; border-radius:14px; padding:24px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.06); border:1px solid #e5e0f7;
+}
+.avatar-wrap { position:relative; width:80px; margin:0 auto 20px; }
+.avatar-lg {
+  width:80px; height:80px; border-radius:50%; background:#EEEDFE;
+  color:#533a9e; display:flex; align-items:center; justify-content:center;
+  font-size:28px; font-weight:600; overflow:hidden;
+}
+.avatar-lg img { width:100%; height:100%; object-fit:cover; }
+.avatar-edit {
+  position:absolute; bottom:0; right:0; width:26px; height:26px;
+  background:#6c4bc9; color:white; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; cursor:pointer; border:2px solid white;
+}
+#profile_picture_input { display:none; }
+label { font-size:13px; color:#555; font-weight:500; display:block; margin-bottom:6px; margin-top:16px; }
+input {
+  width:100%; padding:11px 14px; border:1px solid #ddd; border-radius:8px;
+  font-size:14px; outline:none;
+}
+input:focus { border-color:#6c4bc9; }
+.hint { font-size:11px; color:#999; margin-top:4px; }
+.btn-save {
+  width:100%; margin-top:24px; padding:13px; background:#6c4bc9; color:white;
+  border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;
+}
+.btn-save:hover { background:#533a9e; }
+.msg { padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:13px; }
+.msg-success { background:#e6f7ea; color:#2f9e44; }
+.msg-error { background:#fdeaea; color:#e03131; }
+.divider { border-top:1px solid #eee; margin:22px 0 4px; }
+.section-label { font-size:13px; font-weight:600; color:#6c4bc9; margin-top:4px; }
+.avatar-menu {
+  display:none; position:absolute; top:90px; left:50%; transform:translateX(-50%);
+  background:white; border:1px solid #e5e0f7; border-radius:10px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.12); z-index:10; width:170px; overflow:hidden;
+}
+.avatar-menu.open { display:block; }
+.avatar-menu-item {
+  padding:11px 16px; font-size:13.5px; color:#333; cursor:pointer;
+}
+.avatar-menu-item:hover { background:#f5f3ff; }
+.avatar-menu-item.remove { color:#e03131; }
+
+.photo-modal {
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.85); z-index:100; align-items:center; justify-content:center;
+}
+.photo-modal.open { display:flex; }
+.photo-modal img { max-width:90%; max-height:90%; border-radius:8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="javascript:history.back()" class="back-btn">←</a>
+  <div style="font-size:17px; font-weight:600;">My Profile</div>
+</div>
+
+<div class="container">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="msg {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="card">
+    <form method="POST" enctype="multipart/form-data" id="profileForm">
+      {% csrf_token %}
+
+     <div class="avatar-wrap">
+  <div class="avatar-lg" id="avatarPreview" onclick="toggleAvatarMenu()" style="cursor:pointer;">
+    {% if profile.profile_picture %}
+      <img src="{{ profile.profile_picture.url }}" alt="Profile picture">
+    {% else %}
+      {{ user.username|first|upper }}
+    {% endif %}
+  </div>
+  <div class="avatar-edit" onclick="toggleAvatarMenu()">✎</div>
+  <input type="file" id="profile_picture_input" name="profile_picture" accept="image/*" onchange="previewImage(event)">
+
+  <!-- popup menu -->
+  <div id="avatarMenu" class="avatar-menu">
+    {% if profile.profile_picture %}
+      <div class="avatar-menu-item" onclick="viewPhoto()">View Photo</div>
+    {% endif %}
+    <div class="avatar-menu-item" onclick="document.getElementById('profile_picture_input').click(); toggleAvatarMenu();">
+      {% if profile.profile_picture %}Change Photo{% else %}Upload Photo{% endif %}
+    </div>
+    {% if profile.profile_picture %}
+      <div class="avatar-menu-item remove" onclick="removePhoto()">Remove Photo</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- fullscreen view modal -->
+<div id="photoViewModal" class="photo-modal" onclick="this.style.display='none'">
+  <img id="photoViewImg" src="" alt="Profile photo">
+</div>
+
+<!-- hidden field to signal removal -->
+<input type="hidden" name="remove_picture" id="removePictureFlag" value="0">
+
+      <label>Username</label>
+      <input type="text" name="username" value="{{ user.username }}">
+
+      <label>Phone Number</label>
+      <input type="text" name="phone" id="phoneInput" maxlength="10"
+             value="{{ profile.phone|default:'' }}" placeholder="10-digit number">
+      <div class="hint">Digits only, 10 numbers.</div>
+      <div class="divider"></div>
+      <div class="section-label">Change Password</div>
+
+      <label>Current Password</label>
+      <input type="password" name="old_password" placeholder="Enter current password">
+
+      <label>New Password</label>
+      <input type="password" name="new_password" placeholder="Leave blank to keep current">
+      <div class="hint">8–12 characters, 1 uppercase letter, 1 digit, 1 special character.</div>
+      <a href="{% url 'forgot_password' %}" style="text-decoration: none;">Forgot Password?</a>
+      <button type="submit" class="btn-save">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// Restrict phone input to digits only
+document.getElementById("phoneInput").addEventListener("input", function(e) {
+    this.value = this.value.replace(/[^0-9]/g, "");
+});
+
+// Live preview of uploaded picture
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById("avatarPreview").innerHTML =
+            `<img src="${e.target.result}" alt="Profile picture">`;
+    };
+    reader.readAsDataURL(file);
+}
+function toggleAvatarMenu() {
+    document.getElementById("avatarMenu").classList.toggle("open");
+}
+
+function viewPhoto() {
+    const imgEl = document.querySelector("#avatarPreview img");
+    if (!imgEl) return;
+    document.getElementById("photoViewImg").src = imgEl.src;
+    document.getElementById("photoViewModal").classList.add("open");
+    toggleAvatarMenu();
+}
+
+function removePhoto() {
+    if (!confirm("Remove your profile photo?")) return;
+    document.getElementById("removePictureFlag").value = "1";
+    document.getElementById("avatarPreview").innerHTML =
+        "{{ user.username|first|upper }}";
+    toggleAvatarMenu();
+    document.getElementById("profileForm").submit();  // auto-saves the removal
+}
+
+// close menu if clicking outside
+document.addEventListener("click", function(e) {
+    const menu = document.getElementById("avatarMenu");
+    const wrap = document.querySelector(".avatar-wrap");
+    if (menu && wrap && !wrap.contains(e.target)) {
+        menu.classList.remove("open");
+    }
+});
+</script>
+
+</body>
+</html>

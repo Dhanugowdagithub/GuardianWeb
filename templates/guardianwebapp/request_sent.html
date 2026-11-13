@@ -1,0 +1,92 @@
+{% extends "guardianwebapp/base.html" %}
+{% block content %}
+<div class="card sos-confirmation">
+    <div class="icon-badge">🧑‍🤝‍🧑</div>
+    <h2 id="status-heading">Looking for a companion...</h2>
+    <p class="subtitle" id="status-subtitle">Waiting for a volunteer to accept your request.</p>
+
+    <hr>
+
+    <p><strong>Requested At:</strong> {{ request_obj.requested_at|date:"M d, Y, g:i A" }}</p>
+    <p id="timer-display"><strong>Time remaining:</strong> <span id="countdown">01:00</span></p>
+
+    <div id="volunteer-info" style="display:none;">
+        <p><strong>Assigned Volunteer:</strong> <span id="volunteer-name"></span></p>
+    </div>
+
+    <a href="{% url 'user_dashboard' %}" class="dashboard-btn">Back to Dashboard</a>
+</div>
+
+<script>
+const requestId = {{ request_obj.id }};
+const statusUrl = "{% url 'companion_status_check' request_obj.id %}";
+const timeoutUrl = "{% url 'companion_timeout' request_obj.id %}";
+const chatUrl = `/companion/chat/${requestId}/`;
+
+let secondsLeft = 60; // 1 minute
+let pollInterval, countdownInterval;
+
+function updateCountdownDisplay() {
+    const mins = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+    const secs = (secondsLeft % 60).toString().padStart(2, '0');
+    document.getElementById('countdown').textContent = `${mins}:${secs}`;
+}
+
+function stopTimers() {
+    clearInterval(pollInterval);
+    clearInterval(countdownInterval);
+}
+
+// Poll every 5 seconds to check if a volunteer accepted
+pollInterval = setInterval(() => {
+    fetch(statusUrl)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "Accepted") {
+                stopTimers();
+                document.getElementById('status-heading').textContent = "Volunteer Found!";
+                document.getElementById('status-subtitle').textContent = "A volunteer has accepted your request. Redirecting...";
+                document.getElementById('timer-display').style.display = "none";
+                document.getElementById('volunteer-info').style.display = "block";
+                document.getElementById('volunteer-name').textContent = data.volunteer;
+
+                setTimeout(() => { window.location.href = chatUrl; }, 1200);
+
+            } else if (data.status === "AI_Mode") {
+                stopTimers();
+                document.getElementById('status-heading').textContent = "AI Companion Connected";
+                document.getElementById('status-subtitle').textContent = "No volunteers were available in time. Redirecting to AI companion...";
+                document.getElementById('timer-display').style.display = "none";
+
+                setTimeout(() => { window.location.href = chatUrl; }, 1200);
+            }
+        });
+}, 5000);
+
+// Countdown timer
+countdownInterval = setInterval(() => {
+    secondsLeft--;
+    updateCountdownDisplay();
+
+    if (secondsLeft <= 0) {
+        clearInterval(countdownInterval);
+        // Tell backend to switch to AI mode
+        fetch(timeoutUrl, {
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" }
+        })
+        .then(res => res.json())
+        .then(data => {
+            stopTimers();
+            document.getElementById('status-heading').textContent = "AI Companion Connected";
+            document.getElementById('status-subtitle').textContent = "No volunteers were available in time. Redirecting to AI companion...";
+            document.getElementById('timer-display').style.display = "none";
+
+            setTimeout(() => { window.location.href = chatUrl; }, 1200);
+        });
+    }
+}, 1000);
+
+updateCountdownDisplay();
+</script>
+{% endblock %}

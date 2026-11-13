@@ -1,0 +1,258 @@
+{% extends "guardianwebapp/base.html" %}
+
+{% block title %}Share Live Location{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+.location-btn-container { margin: 10px; }
+.location-btn {
+  background: #fff; border: none; outline: none; width: 40px; height: 40px;
+  border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.location-btn:hover { background: #f4f4f4; }
+.search-suggestions {
+  position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px;
+  max-height: 200px; overflow-y: auto; width: 100%; z-index: 1000; display: none;
+}
+.search-suggestions div { padding: 8px 10px; cursor: pointer; font-size: 14px; }
+.search-suggestions div:hover { background: #f0f0f0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Share Live Location</h2>
+
+    <form action="{% url 'start_session' %}" method="post">
+        {% csrf_token %}
+<input type="hidden" id="origin_lat" name="origin_lat">
+<input type="hidden" id="origin_lng" name="origin_lng">
+<input type="hidden" id="dest_lat" name="dest_lat">
+<input type="hidden" id="dest_lng" name="dest_lng">
+        <label>Current Location</label><br>
+        <div style="position:relative;">
+       <input type="text" id="from_location" name="origin"
+       placeholder="Tap 📍 button or type your address" required
+       autocomplete="off" style="width:100%; padding:8px;">
+            <div id="originSuggestions" class="search-suggestions"></div>
+        </div>
+
+        <input type="hidden" id="origin_lat" name="origin_lat">
+        <input type="hidden" id="origin_lng" name="origin_lng">
+
+        <br><br>
+
+        <label>Destination</label><br>
+        <div style="position:relative;">
+            <input type="text" id="destination" name="destination"
+                   placeholder="Enter destination" required
+                   autocomplete="off" style="width:100%; padding:8px;">
+            <div id="destSuggestions" class="search-suggestions"></div>
+        </div>
+          
+        <br><br>
+        <button type="submit">Start Session</button>
+    </form>
+
+    <br>
+    <div id="map" style="height:400px;width:100%;"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map, originMarker, destMarker, routeLine;
+let activeField = "origin";  // tracks which field map-clicks/GPS button should affect
+
+function initMap() {
+    map = L.map('map').setView([12.9716, 77.5946], 13); // neutral default view, no auto-location
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // "Use current location" control button — only fills ORIGIN
+    const LocateControl = L.Control.extend({
+        onAdd: function() {
+            const div = L.DomUtil.create('div', 'location-btn-container');
+            const btn = L.DomUtil.create('button', 'location-btn', div);
+            btn.type = "button";
+            btn.title = "Use current location as origin";
+            btn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>`;
+            btn.onclick = fetchGPSLocation;
+            L.DomEvent.disableClickPropagation(div);
+            return div;
+        }
+    });
+    map.addControl(new LocateControl({ position: 'bottomright' }));
+
+    // Track which field is "active" based on which input the user last focused
+    document.getElementById("from_location").addEventListener("focus", () => activeField = "origin");
+    document.getElementById("destination").addEventListener("focus", () => activeField = "destination");
+
+    // Clicking the map only updates whichever field is currently active
+    map.on('click', function(e) {
+        if (activeField === "origin") {
+            setOrigin(e.latlng.lat, e.latlng.lng);
+        } else {
+            setDestination(e.latlng.lat, e.latlng.lng);
+        }
+    });
+
+    setupAutocomplete("from_location", "originSuggestions", "origin");
+    setupAutocomplete("destination", "destSuggestions", "destination");
+}
+
+function fetchGPSLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(position) {
+        setOrigin(position.coords.latitude, position.coords.longitude);
+        map.setView([position.coords.latitude, position.coords.longitude], 16);
+    }, function() {
+        alert("Unable to fetch current location. Please allow location access or type your address.");
+    });
+}
+
+function setOrigin(lat, lng) {
+    document.getElementById("origin_lat").value = lat;
+    document.getElementById("origin_lng").value = lng;
+
+    if (!originMarker) {
+        originMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        originMarker.bindPopup("Start location");
+        originMarker.on('dragend', function() {
+            const pos = originMarker.getLatLng();
+            document.getElementById("origin_lat").value = pos.lat;
+            document.getElementById("origin_lng").value = pos.lng;
+            reverseGeocode(pos.lat, pos.lng, "from_location");
+            drawRoute();
+        });
+    } else {
+        originMarker.setLatLng([lat, lng]);
+    }
+
+    reverseGeocode(lat, lng, "from_location");
+    drawRoute();
+}
+
+function setDestination(lat, lng) {
+    document.getElementById("dest_lat").value = lat;
+    document.getElementById("dest_lng").value = lng;
+
+    if (!destMarker) {
+        destMarker = L.marker([lat, lng], {
+            draggable: true,
+            icon: L.icon({
+                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41]
+            })
+        }).addTo(map);
+        destMarker.bindPopup("Destination");
+        destMarker.on('dragend', function() {
+            const pos = destMarker.getLatLng();
+            document.getElementById("dest_lat").value = pos.lat;
+            document.getElementById("dest_lng").value = pos.lng;
+            reverseGeocode(pos.lat, pos.lng, "destination");
+            drawRoute();
+        });
+    } else {
+        destMarker.setLatLng([lat, lng]);
+    }
+
+    reverseGeocode(lat, lng, "destination");
+    drawRoute();
+}
+
+function reverseGeocode(lat, lng, inputId) {
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.display_name) {
+                document.getElementById(inputId).value = data.display_name;
+            }
+        })
+        .catch(err => console.error("Reverse geocode error:", err));
+}
+
+function setupAutocomplete(inputId, suggestionsId, which) {
+    const input = document.getElementById(inputId);
+    const suggestionsBox = document.getElementById(suggestionsId);
+    let debounceTimer;
+
+    input.addEventListener("input", function() {
+        clearTimeout(debounceTimer);
+        const query = this.value;
+        if (query.length < 3) {
+            suggestionsBox.style.display = "none";
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+                .then(res => res.json())
+                .then(results => {
+                    suggestionsBox.innerHTML = "";
+                    if (results.length === 0) {
+                        suggestionsBox.style.display = "none";
+                        return;
+                    }
+                    results.forEach(place => {
+                        const item = document.createElement("div");
+                        item.textContent = place.display_name;
+                        item.onclick = function() {
+                            input.value = place.display_name;
+                            suggestionsBox.style.display = "none";
+
+                            const lat = parseFloat(place.lat);
+                            const lng = parseFloat(place.lon);
+
+                            if (which === "origin") {
+                                setOrigin(lat, lng);
+                            } else {
+                                setDestination(lat, lng);
+                            }
+                            map.setView([lat, lng], 16);
+                        };
+                        suggestionsBox.appendChild(item);
+                    });
+                    suggestionsBox.style.display = "block";
+                })
+                .catch(err => console.error("Search error:", err));
+        }, 400);
+    });
+
+    document.addEventListener("click", function(e) {
+        if (e.target !== input) suggestionsBox.style.display = "none";
+    });
+}
+
+function drawRoute() {
+    const lat1 = document.getElementById("origin_lat").value;
+    const lng1 = document.getElementById("origin_lng").value;
+    const lat2 = document.getElementById("dest_lat").value;
+    const lng2 = document.getElementById("dest_lng").value;
+
+    if (!lat1 || !lng1 || !lat2 || !lng2) return;
+
+    fetch(`https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.routes && data.routes.length > 0) {
+                const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                if (routeLine) map.removeLayer(routeLine);
+                routeLine = L.polyline(coords, { color: "#2196F3", weight: 4 }).addTo(map);
+                map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+            }
+        })
+        .catch(err => console.error("Route error:", err));
+}
+
+document.addEventListener("DOMContentLoaded", initMap);
+</script>
+{% endblock %}

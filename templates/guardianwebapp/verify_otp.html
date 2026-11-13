@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify OTP</title>
+
+<style>
+
+body{
+    box-shadow: 0 5px 15px grey;
+    height: 500px;
+    width: 500px;
+    padding: 20px;
+    background-color: aliceblue;
+    text-align: center;
+    margin: auto;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular',
+                 'Lucida Grande', 'Lucida Sans Unicode',
+                 Geneva, Verdana, sans-serif;
+}
+
+.heading{
+    font-family: cursive;
+    text-shadow: 2px 2px 7px grey;
+    font-size: 30px;
+    color: rgb(176, 9, 168);
+}
+
+form{
+    text-align:center;
+    margin:auto;
+    width:350px;
+}
+
+input{
+    padding:8px;
+    box-shadow:0px 0px 2px grey;
+    width:220px;
+}
+
+.sub{
+    background-color:rgb(5,69,11);
+    color:white;
+    padding:12px;
+    border-radius:8px;
+    width:150px;
+    font-size:15px;
+    border:none;
+    cursor:pointer;
+}
+
+.sub:hover{
+    background-color:rgb(124,162,66);
+    color:black;
+}
+
+.resend{
+    background-color:rgb(176,9,168);
+    color:white;
+    padding:12px;
+    border-radius:8px;
+    width:150px;
+    font-size:15px;
+    border:none;
+    cursor:pointer;
+}
+
+.resend:hover{
+    background-color:rgb(218,120,212);
+    color:black;
+}
+
+.error{
+    color:red;
+}
+
+.success{
+    color:green;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2 class="heading">GuardianWeb OTP Verification</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <p class="{{ message.tags }}">
+            {{ message }}
+        </p>
+    {% endfor %}
+{% endif %}
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <label>Enter OTP</label>
+    <br><br>
+
+    <input
+        type="text"
+        name="otp"
+        id="otp"
+        maxlength="6"
+        placeholder="Enter 6-digit OTP"
+        required>
+
+    <br><br>
+
+    <button class="sub" type="submit">
+        Verify OTP
+    </button>
+
+    <br><br>
+
+    <button
+        class="resend"
+        type="submit"
+        name="resend"
+        value="1">
+        Resend OTP
+    </button>
+
+</form>
+
+<script>
+
+document.getElementById("otp")
+.addEventListener("input", function(){
+
+    this.value = this.value.replace(/[^0-9]/g,'');
+
+    if(this.value.length > 6){
+        this.value = this.value.slice(0,6);
+    }
+
+});
+
+</script>
+
+</body>
+</html>

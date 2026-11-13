@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connected to Police</title>
+  <style>
+    body { margin:0; font-family: Arial, sans-serif; background:#0b1220; color:#fff; }
+    .wrap { max-width:520px; margin:0 auto; padding:20px; }
+    .banner { background:#991b1b; padding:14px; border-radius:10px; text-align:center; font-weight:bold; }
+    .status { text-align:center; margin:22px 0 10px; }
+    .dot { display:inline-block; width:12px; height:12px; border-radius:50%; background:#22c55e; margin-right:8px; animation:pulse 1.2s infinite; }
+    @keyframes pulse { 0%{opacity:1} 50%{opacity:.3} 100%{opacity:1} }
+    .card { background:#1e293b; border-radius:12px; padding:16px; margin:14px 0; }
+    .row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #334155; }
+    .row:last-child { border-bottom:0; }
+    .label { color:#94a3b8; }
+    .big { font-size:20px; font-weight:bold; }
+    .call { text-align:center; background:#14532d; border-radius:12px; padding:18px; margin:14px 0; }
+    .timer { font-size:28px; font-weight:bold; margin-top:6px; }
+    a { color:#93c5fd; }
+    .note { color:#64748b; font-size:12px; text-align:center; margin-top:18px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner">🚨 No guardian or volunteer responded — Police alerted</div>
+
+  <div class="status">
+    <span class="dot"></span><span id="state">Connecting to police station…</span>
+  </div>
+
+  <div class="card">
+    <div class="big">🚓 {{ station.name }}</div>
+    <div class="label">{{ station.area }}</div>
+  </div>
+
+  <div class="card">
+    <div class="row"><span class="label">Station phone</span><span>{{ station.phone }}</span></div>
+    <div class="row"><span class="label">Distance from you</span><span>{{ distance_km }} km</span></div>
+    <div class="row"><span class="label">Estimated arrival</span><span>~{{ eta_min }} min</span></div>
+    <div class="row"><span class="label">Reference no.</span><span>{{ ref }}</span></div>
+    <div class="row"><span class="label">Your location</span><span><a href="{{ map_url }}" target="_blank">View on map</a></span></div>
+  </div>
+
+  <div class="call" id="callbox" style="display:none">
+    📞 <b>Police station is calling you…</b>
+    <div class="timer" id="timer">00:00</div>
+    <div class="label">Stay on the line. Help is on the way.</div>
+  </div>
+
+  <div class="note">Demo: the police station data and call are simulated.</div>
+</div>
+
+<script>
+  setTimeout(function () {
+    document.getElementById("state").innerText = "Connected to {{ station.name }}";
+  }, 3000);
+
+  setTimeout(function () {
+    document.getElementById("callbox").style.display = "block";
+    var s = 0;
+    setInterval(function () {
+      s++;
+      var m = String(Math.floor(s / 60)).padStart(2, "0");
+      var sec = String(s % 60).padStart(2, "0");
+      document.getElementById("timer").innerText = m + ":" + sec;
+    }, 1000);
+  }, 6000);
+</script>
+</body>
+</html>

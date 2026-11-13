@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracking {{ session.user.username }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
+body { background:#f5f3ff; }
+.header { background:#6c4bc9; color:white; padding:16px 20px; font-size:17px; font-weight:600; }
+#map { height: 400px; width: 100%; }
+.info { padding:16px; background:white; }
+.info p { font-size:14px; color:#333; margin-bottom:6px; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+
+<div class="header">📍 Tracking {{ session.user.username }}</div>
+
+<div class="info">
+  <p><strong>Journey:</strong> {{ session.title }}</p>
+  <p><strong>Status:</strong> {{ session.get_status_display }}</p>
+  <p><strong>Started:</strong> {{ session.started_at|date:"M d, Y, g:i A" }}</p>
+</div>
+
+<div id="map"></div>
+
+<script>
+  const map = L.map('map').setView([
+    {{ location.latitude|default:12.9716 }},
+    {{ location.longitude|default:77.5946 }}
+  ], 15);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  const marker = L.circleMarker([
+    {{ location.latitude|default:12.9716 }},
+    {{ location.longitude|default:77.5946 }}
+  ], { radius: 8, fillColor: "#2196F3", color: "#fff", weight: 2, fillOpacity: 1 }).addTo(map);
+
+  function pollLocation() {
+    fetch("{% url 'watch_by_code' session.share_code %}?ajax=1")
+      .then(res => res.json())
+      .then(data => {
+        if (data.latitude && data.longitude) {
+          marker.setLatLng([data.latitude, data.longitude]);
+          map.panTo([data.latitude, data.longitude]);
+        }
+      });
+  }
+  setInterval(pollLocation, 5000);
+</script>
+
+</body>
+</html>

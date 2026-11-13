@@ -1,0 +1,56 @@
+{% extends "guardianwebapp/base.html" %}
+{% block content %}
+<div class="container" style="max-width:500px; margin:30px auto;">
+    <h2>Settings</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding:10px; margin:10px 0; border-radius:6px; background:{% if message.tags == 'error' %}#FAECE7{% else %}#EAF3DE{% endif %}; color:{% if message.tags == 'error' %}#993C1D{% else %}#3B6D11{% endif %};">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card" style="padding:20px; margin-bottom:20px;">
+        <h3>Profile Details</h3>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="profile">
+
+            <label>Username</label><br>
+            <input type="text" name="username" value="{{ request.user.username }}" style="width:100%; padding:8px; margin:6px 0 16px;">
+
+            <label>Phone Number</label><br>
+            <input type="text" name="phone" value="{{ profile.phone }}" placeholder="10-digit phone number"
+                   inputmode="numeric" maxlength="10"
+                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                   style="width:100%; padding:8px; margin:6px 0 16px;">
+
+            <button type="submit" style="width:100%; padding:10px; background:#4b49ac; color:white; border:none; border-radius:6px; cursor:pointer;">
+                Save Changes
+            </button>
+        </form>
+    </div>
+
+    <div class="card" style="padding:20px;">
+        <h3>Change Password</h3>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="form_type" value="password">
+
+            <label>Old Password</label><br>
+            <input type="password" name="old_password" style="width:100%; padding:8px; margin:6px 0 16px;" required>
+
+            <label>New Password</label><br>
+            <input type="password" name="new_password1" style="width:100%; padding:8px; margin:6px 0 16px;" required>
+
+            <label>Confirm New Password</label><br>
+            <input type="password" name="new_password2" style="width:100%; padding:8px; margin:6px 0 16px;" required>
+
+            <button type="submit" style="width:100%; padding:10px; background:#4b49ac; color:white; border:none; border-radius:6px; cursor:pointer;">
+                Update Password
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

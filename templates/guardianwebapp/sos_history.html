@@ -1,0 +1,25 @@
+{% extends "guardianwebapp/base.html" %}
+{% block content %}
+<div class="container" style="max-width:600px; margin:0 auto; padding:20px 16px;">
+  <h2 style="margin-bottom:16px;">📜 My SOS History</h2>
+
+  {% if sos_history %}
+    {% for alert in sos_history %}
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:14px; background:#f3f4f6; border-radius:10px; margin-bottom:10px;">
+        <div>
+          <div style="font-weight:600; font-size:14px;">SOS sent — {{ alert.status }}</div>
+          <div style="font-size:12px; color:#666;">{{ alert.created_at|date:"M d, Y, g:i A" }}</div>
+        </div>
+        {% if alert.voice_note %}
+          <a href="{{ alert.voice_note.url }}" target="_blank"
+             style="padding:8px 16px; background:#6c4bc9; color:white; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600;">
+            🔊 SOS Audio
+          </a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p style="text-align:center; color:gray; padding:30px 0;">No SOS alerts sent yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

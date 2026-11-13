@@ -1,0 +1,52 @@
+<div class="card">
+    <h2>🚨 Emergency Requests</h2>
+
+    {% if requests %}
+        {% for req in requests %}
+        <div class="request-card priority-{{ req.priority|lower }}">
+            <h4>{{ req.user.username }}</h4>
+
+            <p><strong>Priority:</strong> {{ req.priority }}</p>
+
+            <p><strong>Location:</strong> {{ req.address|default:"Location available" }}
+                {% if req.latitude and req.longitude %}
+                    <a href="https://www.google.com/maps?q={{ req.latitude }},{{ req.longitude }}"
+                       target="_blank" rel="noopener noreferrer" class="location-link">
+                        📍 View Live Location
+                    </a>
+                {% endif %}
+            </p>
+
+            <p><strong>Assigned Guardian(s):</strong>
+                {% if req.session and req.session.guardian_links.all %}
+                    {% for link in req.session.guardian_links.all %}
+                        {{ link.guardian.get_full_name|default:link.guardian.username|default:link.viewer_name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span class="no-guardian">No guardian assigned</span>
+                {% endif %}
+            </p>
+
+            <p><strong>Volunteers Notified:</strong>
+                {% if req.volunteers_notified.all %}
+                    {% for v in req.volunteers_notified.all %}
+                        {{ v.user.get_full_name|default:v.user.username }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span class="no-guardian">No volunteers found nearby</span>
+                {% endif %}
+            </p>
+
+            <p class="timestamp">{{ req.created_at|date:"M d, Y, g:i A" }}</p>
+
+            <a href="{% url 'accept_request' req.id %}" class="accept-btn">
+                Accept Request
+            </a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-box">
+            ✅ No active emergency requests.
+        </div>
+    {% endif %}
+</div>

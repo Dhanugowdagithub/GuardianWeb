@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Emergency Alerts</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
+body { background:#f5f3ff; min-height:100vh; }
+.header {
+  background:#6c4bc9; color:white; padding:14px 20px;
+  display:flex; align-items:center; gap:14px;
+}
+.back-btn { color:white; text-decoration:none; font-size:20px; }
+.container { max-width:600px; margin:0 auto; padding:20px 16px 40px; }
+.card {
+  background:white; border-radius:14px; padding:18px;
+  margin-bottom:18px; box-shadow:0 2px 6px rgba(0,0,0,0.05); border:1px solid #e5e0f7;
+}
+.section-title {
+  font-size:15px; font-weight:600; color:#333; margin-bottom:14px;
+  display:flex; align-items:center; gap:8px;
+}
+.alert-item {
+  padding:14px; border-radius:10px; margin-bottom:10px;
+  border-left:4px solid #e03131; background:#fdeaea;
+}
+.alert-item.resolved { border-left-color:#999; background:#f4f4f4; }
+.alert-item.accepted { border-left-color:#f08c00; background:#fff4e0; }
+.alert-user { font-weight:600; font-size:14px; color:#222; }
+.alert-status { font-size:12px; font-weight:600; margin-top:4px; }
+.status-pending { color:#e03131; }
+.status-accepted { color:#f08c00; }
+.status-resolved { color:#666; }
+.alert-detail { font-size:13px; color:#555; margin-top:6px; }
+.alert-time { font-size:11px; color:#888; margin-top:6px; }
+.btn-resolve {
+  margin-top:10px; padding:7px 14px; font-size:12px; border:none;
+  border-radius:8px; background:#6c4bc9; color:white; cursor:pointer;
+}
+.btn-resolve:hover { background:#533a9e; }
+.empty-state { text-align:center; color:#888; padding:24px 0; font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="{% url 'guardian_dashboard' %}" class="back-btn">←</a>
+  <div style="font-size:17px; font-weight:600;">🚨 Emergency Alerts</div>
+</div>
+
+<div class="container">
+
+  <div class="card">
+{% if current_alerts %}
+  {% for alert in current_alerts %}
+    <div class="alert-item {% if alert.status == 'Accepted' %}accepted{% endif %}">
+      <div class="alert-user">{{ alert.user.username }}</div>
+
+      <div class="alert-status {% if alert.status == 'Accepted' %}status-accepted{% else %}status-pending{% endif %}">
+        {% if alert.accepted_by %}
+          🟠 Accepted by volunteer <strong>{{ alert.accepted_by.user.username }}</strong> — ongoing
+        {% elif alert.accepted_by_guardian %}
+          🟠 Accepted by guardian <strong>{{ alert.accepted_by_guardian.username }}</strong> — ongoing
+        {% else %}
+          🔴 No one has accepted this alert yet
+        {% endif %}
+      </div>
+
+      <div class="alert-detail">
+        📍 {{ alert.address|default:"Location available" }}
+        {% if alert.latitude and alert.longitude %}
+          — <a href="https://www.google.com/maps?q={{ alert.latitude }},{{ alert.longitude }}" target="_blank">View map</a>
+        {% endif %}
+      </div>
+      <div class="alert-time">{{ alert.created_at|date:"M d, Y, g:i A" }}</div>
+
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        {% if not alert.accepted_by and not alert.accepted_by_guardian %}
+          <form method="POST" action="{% url 'guardian_accept_alert' alert.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-resolve" style="background:#f08c00;"
+                    onclick="return confirm('Accept this SOS alert?');">
+              Accept
+            </button>
+          </form>
+          {% if alert.transcript %}
+  <div class="alert-detail">🗣️ "{{ alert.transcript }}"</div>
+{% endif %}
+{% if alert.voice_note %}
+  <div class="alert-detail">
+    🎙️ <audio controls src="{{ alert.voice_note.url }}" style="width:100%; margin-top:6px;"></audio>
+  </div>
+{% endif %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'mark_alert_resolved' alert.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-resolve"
+                  onclick="return confirm('Mark this alert as resolved?');">
+            Mark as Resolved
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">No active alerts right now.</div>
+{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="section-title">📜 Past History</div>
+    {% if past_alerts %}
+      {% for alert in past_alerts %}
+        <div class="alert-item resolved">
+          <div class="alert-user">{{ alert.user.username }}</div>
+          <div class="alert-status status-resolved">
+  ✅ Resolved
+  {% if alert.accepted_by %}
+    (handled by volunteer {{ alert.accepted_by.user.username }})
+  {% elif alert.accepted_by_guardian %}
+    (handled by guardian {{ alert.accepted_by_guardian.username }})
+  {% else %}
+    (no one accepted before resolution)
+  {% endif %}
+</div>
+          <div class="alert-detail">📍 {{ alert.address|default:"Location available" }}</div>
+          <div class="alert-time">
+            Raised: {{ alert.created_at|date:"M d, Y, g:i A" }}
+            {% if alert.resolved_at %} · Resolved: {{ alert.resolved_at|date:"M d, Y, g:i A" }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">No past alerts yet.</div>
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>

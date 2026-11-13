@@ -1,0 +1,643 @@
+{% extends "guardianwebapp/base.html" %}
+
+{% block title %}User Dashboard – GuardianWeb{% endblock %}
+
+{% block extra_css %}
+<!-- Tabler Icons CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+<style>
+:root {
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f3f4f6;
+  --color-border-tertiary: #e5e7eb;
+  --color-border-secondary: #d1d5db;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.db { padding: 1rem 0; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); margin-bottom: 16px; }
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: #CECBF6; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: #3C3489; }
+.topbar-name { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+.topbar-sub { font-size: 12px; color: var(--color-text-secondary); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.badge-safe { background: #EAF3DE; color: #3B6D11; font-size: 12px; padding: 4px 12px; border-radius: var(--border-radius-md); font-weight: 500; }
+.badge-danger { background: #FAECE7; color: #993C1D; font-size: 12px; padding: 4px 12px; border-radius: var(--border-radius-md); font-weight: 500; }
+.icon-btn { width: 34px; height: 34px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-tertiary); background: var(--color-background-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-text-secondary); font-size: 18px; }
+.icon-btn:hover { background: var(--color-background-secondary); }
+
+.panic-btn { width: 100%; padding: 18px; background: #FAECE7; border: 1.5px solid #F0997B; border-radius: var(--border-radius-lg); display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; margin-bottom: 16px; transition: background 0.15s; text-align: left; }
+.panic-btn:hover { background: #F5C4B3; }
+.panic-label { font-size: 18px; font-weight: 500; color: #712B13; }
+.panic-sub { font-size: 13px; color: #993C1D; }
+
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px 16px; }
+.stat-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.stat-val { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.stat-sub { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+
+.row2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 16px; height: 100%; display: flex; flex-direction: column; }
+.card-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.card-title i { font-size: 16px; color: var(--color-text-secondary); }
+
+.map-placeholder { background: var(--color-background-secondary); border-radius: var(--border-radius-md); height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--color-text-secondary); font-size: 13px; margin-bottom: 12px; text-align: center; }
+.map-placeholder i { font-size: 32px; }
+
+.guardian-list { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.guardian-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.guardian-item:last-child { border-bottom: none; }
+.guardian-left { display: flex; align-items: center; gap: 10px; }
+.g-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; }
+.g-name { font-size: 14px; color: var(--color-text-primary); }
+.g-rel { font-size: 12px; color: var(--color-text-secondary); }
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-on { background: #639922; }
+.dot-off { background: var(--color-text-secondary); opacity: 0.4; }
+
+.btn-row { display: flex; gap: 8px; margin-top: auto; padding-top: 12px; }
+.btn-sm { flex: 1; padding: 8px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); font-size: 13px; color: var(--color-text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
+.btn-sm:hover { background: var(--color-background-secondary); }
+.btn-primary { background: #EEEDFE; border-color: #AFA9EC; color: #3C3489; }
+.btn-primary:hover { background: #CECBF6; }
+
+.alert-list { display: flex; flex-direction: column; gap: 10px; }
+.alert-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); }
+.alert-icon { width: 30px; height: 30px; border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.alert-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.alert-time { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+
+.companion-box { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px; text-align: center; }
+.companion-icon { font-size: 32px; color: #534AB7; margin-bottom: 8px; }
+.companion-text { font-size: 14px; color: var(--color-text-primary); font-weight: 500; }
+.companion-sub { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; margin-bottom: 12px; }
+
+.shake-controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="db">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="avatar">{{ user.username|slice:":2"|upper }}</div>
+        <div>
+          <div class="topbar-name">{{ user.username }}</div>
+          <div class="topbar-sub">Bengaluru</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        {% if sharing_active %}
+          <span class="badge-danger"><span class="spinner-grow spinner-grow-sm text-danger" role="status" style="width: 10px; height: 10px; margin-right: 4px;"></span> Sharing Location</span>
+        {% else %}
+          <span class="badge-safe"><i class="ti ti-shield-check" aria-hidden="true"></i> Safe</span>
+        {% endif %}
+        <a href="{% url 'notifications_view' %}" class="icon-btn" style="text-decoration:none;"><i class="ti ti-bell" aria-hidden="true"></i></a>
+        <a href="{% url 'profile_settings' %}" class="menu-item">👤 My Profile</a>
+      </div>
+    </div>
+
+    <!-- Panic button -->
+    <a href="{% url 'sos_sent' %}" style="text-decoration:none; color:inherit;" onclick="return confirm('⚠️ Activate SOS Emergency Alert? This will notify your guardians instantly.');">
+      <div class="panic-btn">
+        <i class="ti ti-alert-triangle" style="font-size:28px; color:#993C1D;" aria-hidden="true"></i>
+        <div>
+          <div class="panic-label">SOS — Panic alert</div>
+          <div class="panic-sub">Tap to alert guardians &amp; volunteers instantly</div>
+        </div>
+      </div>
+    </a>
+    <a href="{% url 'sos_history' %}" class="btn-sm btn-primary" style="width:100%; justify-content:center; margin-top:8px; margin-bottom:16px; text-decoration:none;">
+      📜 My SOS History
+    </a>
+
+    <div id="sos-countdown-overlay" style="display:none; position:fixed; inset:0; background:rgba(200,0,0,0.95); z-index:9999; flex-direction:column; align-items:center; justify-content:center; color:white; text-align:center;">
+      <div style="font-size:22px; font-weight:600; margin-bottom:20px;">🚨 SOS Alert Triggered</div>
+      <div id="sos-countdown-number" style="font-size:80px; font-weight:700; margin-bottom:30px;">10</div>
+      <div style="font-size:15px; margin-bottom:30px; opacity:0.9;">Sending emergency alert automatically. The siren continues until you stop it.</div>
+      <button id="sos-cancel-btn" style="padding:16px 40px; font-size:16px; font-weight:600; background:white; color:#c00; border:none; border-radius:30px; cursor:pointer;">
+        I'm okay — Cancel
+      </button>
+    </div>
+
+    <div class="shake-controls">
+      <button id="shake-status-btn" class="btn" style="padding:10px 16px; border-radius:8px; border:1px solid #ccc; background:white; cursor:pointer;">🎙️ Enable Shake Alert</button>
+      <button id="stop-recording-btn" type="button" style="display:none; padding:10px 16px; border-radius:8px; border:none; background:#c0392b; color:white; cursor:pointer;">⏹️ Stop Recording</button>
+      <button id="stop-siren-btn" type="button" style="padding:10px 16px; border-radius:8px; border:1px solid #ccc; background:white; cursor:pointer;">
+        🔇 Stop Siren
+      </button>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid2">
+      <div class="stat-card">
+        <div class="stat-label"><i class="ti ti-users" aria-hidden="true"></i> Guardians</div>
+        <div class="stat-val">{{ guardians_count }}</div>
+        <div class="stat-sub">{{ guardians_online_count }} online now</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="ti ti-map-pin" aria-hidden="true"></i> Location sharing</div>
+        <div class="stat-val">{% if sharing_active %}Active{% else %}Inactive{% endif %}</div>
+        <div class="stat-sub">{% if sharing_active %}Live GPS on{% else %}Not sharing{% endif %}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="ti ti-bell" aria-hidden="true"></i> Alerts sent</div>
+        <div class="stat-val">{{ alerts_sent_week }}</div>
+        <div class="stat-sub">This week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><i class="ti ti-heart" aria-hidden="true"></i> Total journeys</div>
+        <div class="stat-val">{{ total_sessions }}</div>
+        <div class="stat-sub">Total sessions</div>
+      </div>
+    </div>
+
+    <!-- Map + Guardians row -->
+    <div class="row2">
+
+      <!-- Live journey map -->
+      <div class="card">
+        <div class="card-title"><i class="ti ti-map-2" aria-hidden="true"></i> Live journey map</div>
+
+        {% if sharing_active and session %}
+          <div id="map" style="height: 180px; width: 100%; border-radius: var(--border-radius-md); margin-bottom: 12px; border: 1px solid var(--color-border-tertiary);"></div>
+        {% else %}
+          <div class="map-placeholder">
+            <i class="ti ti-map-pin" aria-hidden="true"></i>
+            <div style="font-weight: 500; font-size: 14px;">No active journey sharing</div>
+            <div style="font-size: 11px; opacity: 0.8;">Start location sharing to see map here</div>
+          </div>
+        {% endif %}
+
+        <div class="btn-row">
+          {% if sharing_active and session %}
+            <a href="{% url 'track' session.id %}" class="btn-sm btn-primary">
+              <i class="ti ti-eye"></i> View Tracking Screen
+            </a>
+            <a href="{% url 'stop_sharing' session.id %}"
+               class="btn-sm"
+               style="background:#FAECE7; border-color:#F0997B; color:#993C1D;"
+               onclick="return confirm('Stop sharing your live location? Your guardians will no longer see your location.');">
+              <i class="ti ti-player-stop"></i> Stop Sharing
+            </a>
+          {% else %}
+            <a href="{% url 'share_location' %}" class="btn-sm btn-primary">
+              <i class="ti ti-share"></i> Share live location
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Guardians list -->
+      <div class="card">
+        <div class="card-title"><i class="ti ti-users" aria-hidden="true"></i> Active Guardians</div>
+        <div class="guardian-list">
+          {% if guardians %}
+            {% for g in guardians %}
+              <div class="guardian-item">
+                <div class="guardian-left">
+                  <div class="g-avatar" style="background: #CECBF6; color: #3C3489;">
+                    {% if g.guardian %}
+                      {{ g.guardian.username|slice:":2"|upper }}
+                    {% else %}
+                      {{ g.viewer_name|slice:":2"|upper }}
+                    {% endif %}
+                  </div>
+                  <div>
+                    <div class="g-name">
+                      {% if g.guardian %}
+                        {{ g.guardian.username }}
+                      {% else %}
+                        {{ g.viewer_name }}
+                      {% endif %}
+                    </div>
+                    <div class="g-rel">Guardian</div>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="dot {% if g.is_online %}dot-on{% else %}dot-off{% endif %}" title="{% if g.is_online %}Online{% else %}Offline{% endif %}"></span>
+                  <a href="{% url 'remove_guardian' g.id %}" onclick="return confirm('Remove this guardian?')" style="color:red; text-decoration:none; font-size:18px;">
+                    ✖
+                  </a>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p style="text-align:center; color:gray; font-size: 13px; padding-top: 20px;">No guardians added yet</p>
+          {% endif %}
+        </div>
+
+        {% if session %}
+          <div class="btn-row" style="margin-top: 12px;">
+            <a href="{% url 'add_guardian' session.id %}" class="btn-sm btn-primary" style="width: 100%;">
+              <i class="ti ti-plus"></i> Add Guardian
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Alert history + Companion row -->
+    <div class="row2">
+
+      <!-- Alert history -->
+      <div class="card">
+        <div class="card-title"><i class="ti ti-clock" aria-hidden="true"></i> Recent activity</div>
+        <div class="alert-list">
+          {% if recent_activities %}
+            {% for act in recent_activities %}
+              <div class="alert-item">
+                <div class="alert-icon" style="background: {{ act.color }}; color: {{ act.text_color }};">
+                  <i class="ti {{ act.icon }}" aria-hidden="true"></i>
+                </div>
+                <div>
+                  <div class="alert-title">{{ act.title }}</div>
+                  <div class="alert-time">{{ act.time|date:"D, d M Y, h:i A" }}</div>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p style="text-align:center; color:gray; font-size:13px; padding: 20px 0;">No recent activities logged</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Companion mode -->
+      <div class="card">
+        <div class="card-title"><i class="ti ti-message-circle" aria-hidden="true"></i> Companion mode</div>
+        <div class="companion-box">
+          <div class="companion-icon"><i class="ti ti-heart" aria-hidden="true"></i></div>
+          <div class="companion-text">Need someone to talk to?</div>
+          <div class="companion-sub">Connect instantly with a human volunteer for emotional support</div>
+          <a href="{% url 'companion_view' %}" class="btn-sm btn-primary" style="width:100%; justify-content:center;">
+            <i class="ti ti-message-circle" aria-hidden="true"></i> Start companion session ↗
+          </a>
+        </div>
+        <div style="margin-top:12px; padding:10px; background:var(--color-background-secondary); border-radius:var(--border-radius-md); display:flex; align-items:center; gap:8px;">
+          <div class="dot dot-on"></div>
+          <span style="font-size:13px; color:var(--color-text-secondary);">
+            {{ available_volunteers_count }} volunteer{{ available_volunteers_count|pluralize }} available right now
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if sharing_active and session %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  let map, marker;
+
+  function initDashboardMap() {
+    const defaultPos = [
+      {{ session.origin_lat|default:12.9716 }},
+      {{ session.origin_lng|default:77.5946 }}
+    ];
+
+    map = L.map('map').setView(defaultPos, 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    marker = L.circleMarker(defaultPos, {
+        radius: 8,
+        fillColor: "#2196F3",
+        color: "#fff",
+        weight: 2,
+        fillOpacity: 1
+    }).addTo(map);
+
+    pollLocation();
+    setInterval(pollLocation, 5000);
+  }
+
+  function pollLocation() {
+    fetch("{% url 'get_live_location' %}")
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const newPos = [data.latitude, data.longitude];
+          marker.setLatLng(newPos);
+          map.panTo(newPos);
+        }
+      })
+      .catch(err => console.error("Error polling location:", err));
+  }
+
+  document.addEventListener("DOMContentLoaded", initDashboardMap);
+</script>
+{% endif %}
+<script>
+let mediaRecorder;
+let audioChunks = [];
+let recognizedText = "";
+let isRecording = false;
+let countdownActive = false;
+let countdownTimer = null;
+let sirenOscillator = null;
+let sirenAudioCtx = null;
+let shakeAlertEnabled = false;
+let sosCancelled = false;
+
+let shakeCount = 0;
+let shakeWindowStart = 0;
+const SHAKE_THRESHOLD = 10;
+const SHAKE_PATTERN_WINDOW_MS = 2000;
+const REQUIRED_SHAKES = 4;
+const RECORD_DURATION_MS = 6000;
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
+function handleMotion(event) {
+    if (countdownActive || isRecording) return;
+
+    const acc = event.acceleration;
+    if (!acc || acc.x === null) return;
+
+    const magnitude = Math.sqrt(
+        (acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2
+    );
+    const now = Date.now();
+
+    if (magnitude > SHAKE_THRESHOLD) {
+        if (now - shakeWindowStart > SHAKE_PATTERN_WINDOW_MS) {
+            shakeWindowStart = now;
+            shakeCount = 1;
+        } else {
+            shakeCount++;
+        }
+
+        if (shakeCount >= REQUIRED_SHAKES) {
+            shakeCount = 0;
+            startCountdown();
+        }
+    }
+}
+
+function startSiren() {
+    if (!sirenAudioCtx) {
+        sirenAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    sirenOscillator = sirenAudioCtx.createOscillator();
+    const gainNode = sirenAudioCtx.createGain();
+
+    sirenOscillator.type = "sawtooth";
+    gainNode.gain.value = 1.0;
+
+    sirenOscillator.connect(gainNode);
+    gainNode.connect(sirenAudioCtx.destination);
+    if (sirenAudioCtx.state === "suspended") {
+        sirenAudioCtx.resume().catch(err => console.error("Could not resume siren audio:", err));
+    }
+    sirenOscillator.start();
+
+    let rising = true;
+    let freq = 600;
+    const sweepInterval = setInterval(() => {
+        if (!sirenOscillator) {
+            clearInterval(sweepInterval);
+            return;
+        }
+        freq += rising ? 40 : -40;
+        if (freq >= 1200) rising = false;
+        if (freq <= 600) rising = true;
+        sirenOscillator.frequency.setValueAtTime(freq, sirenAudioCtx.currentTime);
+    }, 60);
+
+    sirenOscillator._sweepInterval = sweepInterval;
+}
+
+function stopSiren() {
+    try {
+        if (sirenOscillator) {
+            if (sirenOscillator._sweepInterval) {
+                clearInterval(sirenOscillator._sweepInterval);
+            }
+            sirenOscillator.stop();
+            sirenOscillator.disconnect();
+        }
+    } catch (e) {
+        console.log("Siren stop error (safe to ignore):", e);
+    } finally {
+        sirenOscillator = null;
+    }
+}
+
+function startCountdown() {
+    if (countdownActive) return;
+
+    countdownActive = true;
+    sosCancelled = false;
+    let secondsLeft = 10;
+
+    document.getElementById("sos-countdown-overlay").style.display = "flex";
+    document.getElementById("sos-countdown-number").innerText = secondsLeft;
+
+    stopSiren();
+    startSiren();
+
+    countdownTimer = setInterval(() => {
+        secondsLeft--;
+        document.getElementById("sos-countdown-number").innerText = secondsLeft;
+
+        if (secondsLeft <= 0) {
+            clearInterval(countdownTimer);
+            document.getElementById("sos-countdown-overlay").style.display = "none";
+            countdownActive = false;
+
+            if (!sosCancelled) {
+                startShakeSOS();
+            }
+            sosCancelled = false;
+        }
+    }, 1000);
+}
+
+document.getElementById("sos-cancel-btn").addEventListener("click", function () {
+    sosCancelled = true;
+    clearInterval(countdownTimer);
+    stopSiren();
+    document.getElementById("sos-countdown-overlay").style.display = "none";
+    countdownActive = false;
+});
+
+document.getElementById("stop-siren-btn").addEventListener("click", function () {
+    stopSiren();
+});
+
+let currentAlertId = null;
+let pendingVoiceNote = null;
+
+function startShakeSOS() {
+    if (isRecording) return;
+    isRecording = true;
+    recognizedText = "";
+
+    document.getElementById("shake-status-btn").innerText = "🔴 Recording... tap Stop when done";
+    const stopRecBtnEl = document.getElementById("stop-recording-btn");
+    if (stopRecBtnEl) stopRecBtnEl.style.display = "inline-block";
+
+    const formData = new FormData();
+    formData.append("csrfmiddlewaretoken", getCookie("csrftoken"));
+
+    fetch("{% url 'sos_sent' %}", { method: "POST", body: formData })
+        .then(res => {
+            if (!res.ok) throw new Error("Server rejected the request");
+            return res.json();
+        })
+        .then(data => {
+            if (data.success && data.alert_id) {
+                currentAlertId = data.alert_id;
+                if (pendingVoiceNote) {
+                    const voiceNote = pendingVoiceNote;
+                    pendingVoiceNote = null;
+                    uploadVoiceNote(voiceNote);
+                }
+            } else {
+                console.error("SOS alert response missing alert_id.");
+            }
+        })
+        .catch(err => {
+            console.error("SOS alert send failed:", err);
+            alert("SOS alert failed to send. Please try the panic button instead, or check your connection.");
+        });
+
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
+
+        mediaRecorder = mimeType
+            ? new MediaRecorder(stream, { mimeType: mimeType })
+            : new MediaRecorder(stream);
+
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => {
+            if (e.data && e.data.size > 0) audioChunks.push(e.data);
+        };
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+            uploadVoiceNote(audioBlob);
+            stream.getTracks().forEach(t => t.stop());
+        };
+        mediaRecorder.start(1000);
+    }).catch(() => {
+        console.log("Microphone access denied — SOS alert still sent without audio.");
+        isRecording = false;
+        document.getElementById("shake-status-btn").innerText = shakeAlertEnabled ? "🛑 Disable Shake Alert" : "🎙️ Enable Shake Alert";
+        const stopRecBtnEl2 = document.getElementById("stop-recording-btn");
+        if (stopRecBtnEl2) stopRecBtnEl2.style.display = "none";
+    });
+
+    if ("webkitSpeechRecognition" in window) {
+        window.currentRecognition = new webkitSpeechRecognition();
+        window.currentRecognition.continuous = true;
+        window.currentRecognition.interimResults = false;
+        window.currentRecognition.lang = "en-IN";
+        window.currentRecognition.onresult = (event) => {
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                recognizedText += event.results[i][0].transcript + " ";
+            }
+        };
+        window.currentRecognition.start();
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+    }
+    if (window.currentRecognition) {
+        window.currentRecognition.stop();
+    }
+
+    isRecording = false;
+    document.getElementById("shake-status-btn").innerText = shakeAlertEnabled ? "🛑 Disable Shake Alert" : "🎙️ Enable Shake Alert";
+    const stopRecBtnEl3 = document.getElementById("stop-recording-btn");
+    if (stopRecBtnEl3) stopRecBtnEl3.style.display = "none";
+}
+
+function uploadVoiceNote(audioBlob) {
+    if (!currentAlertId) {
+        pendingVoiceNote = audioBlob;
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("voice_note", audioBlob, "sos_voice.webm");
+    formData.append("transcript", recognizedText.trim());
+    formData.append("csrfmiddlewaretoken", getCookie("csrftoken"));
+
+    fetch(`/sos/${currentAlertId}/attach-voice/`, { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Voice note attached:", data);
+        })
+        .catch(() => {
+            console.log("Failed to attach voice note.");
+        });
+}
+
+const stopRecBtn = document.getElementById("stop-recording-btn");
+if (stopRecBtn) stopRecBtn.addEventListener("click", stopRecording);
+
+document.getElementById("shake-status-btn").addEventListener("click", function () {
+    if (!shakeAlertEnabled) {
+        if (!sirenAudioCtx) {
+            sirenAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (sirenAudioCtx.state === "suspended") {
+            sirenAudioCtx.resume().catch(err => console.error("Could not activate siren audio:", err));
+        }
+        if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+            DeviceMotionEvent.requestPermission().then(response => {
+                if (response === "granted") {
+                    window.addEventListener("devicemotion", handleMotion);
+                    shakeAlertEnabled = true;
+                    this.innerText = "🛑 Disable Shake Alert";
+                    this.style.background = "#FAECE7";
+                } else {
+                    alert("Motion permission denied. Shake Alert cannot be enabled.");
+                }
+            }).catch(() => {
+                alert("Could not request motion permission on this device.");
+            });
+        } else {
+            window.addEventListener("devicemotion", handleMotion);
+            shakeAlertEnabled = true;
+            this.innerText = "🛑 Disable Shake Alert";
+            this.style.background = "#FAECE7";
+        }
+    } else {
+        window.removeEventListener("devicemotion", handleMotion);
+        shakeAlertEnabled = false;
+        this.innerText = "🎙️ Enable Shake Alert";
+        this.style.background = "";
+        shakeCount = 0;
+    }
+});
+</script>
+{% endblock %}

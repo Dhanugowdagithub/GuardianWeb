@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GuardianWeb Registration</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#0D1B2A,#1B263B);
+    font-family:'Segoe UI',sans-serif;
+}
+
+.container{
+    background:#fff;
+    width:450px;
+    padding:35px;
+    border-radius:15px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.3);
+}
+
+.heading{
+    text-align:center;
+    color:#7B2FBE;
+    margin-bottom:25px;
+    font-size:32px;
+    text-shadow:1px 1px 5px lightgray;
+}
+
+label{
+    display:block;
+    margin-bottom:6px;
+    font-weight:bold;
+    color:#333;
+}
+
+input,
+select{
+    width:100%;
+    padding:12px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    margin-bottom:18px;
+    font-size:15px;
+}
+
+input:focus,
+select:focus{
+    border-color:#7B2FBE;
+    outline:none;
+    box-shadow:0 0 8px rgba(123,47,190,0.3);
+}
+
+.btn-group{
+    display:flex;
+    justify-content:space-between;
+    margin-top:10px;
+}
+
+.sub{
+    width:48%;
+    padding:12px;
+    background:#0bb546;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:bold;
+}
+
+.sub:hover{
+    background:#4ce797;
+}
+
+.clr{
+    width:48%;
+    padding:12px;
+    background:#E63946;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:bold;
+}
+
+.clr:hover{
+    background:#C1121F;
+}
+
+.error{
+    color:red;
+    text-align:center;
+    margin-bottom:15px;
+    font-weight:bold;
+}
+
+.success{
+    color:green;
+    text-align:center;
+    margin-bottom:15px;
+    font-weight:bold;
+}
+
+.login-link{
+    text-align:center;
+    margin-top:20px;
+}
+
+.login-link a{
+    text-decoration:none;
+    color:#b70ce2;
+    font-weight:bold;
+}
+
+.login-link a:hover{
+    text-decoration:underline;
+}
+
+.role-note{
+    font-size:13px;
+    color:#666;
+    margin-top:-12px;
+    margin-bottom:15px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2 class="heading">GuardianWeb</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <p class="{{ message.tags }}">
+                {{ message }}
+            </p>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+
+        {% csrf_token %}
+
+        <label>Full Name</label>
+
+        <input
+            type="text"
+            name="username"
+            placeholder="Enter your name"
+            minlength="3"
+            maxlength="30"
+            required>
+
+        <label>Phone Number</label>
+
+        <input
+            type="tel"
+            name="phone"
+            id="phone"
+            placeholder="Enter 10-digit mobile number"
+            maxlength="10"
+            required>
+
+        <label>Password</label>
+
+        <input
+            type="password"
+            name="password"
+            placeholder="8-12 chars, 1 uppercase & 1 special character"
+            minlength="8"
+            maxlength="12"
+            required>
+
+        <label>Select Role</label>
+
+        <select name="role" required>
+            <option value="">Choose Role</option>
+            <option value="user">User</option>
+            <option value="guardian">Guardian</option>
+            <option value="volunteer">Volunteer</option>
+        </select>
+
+        <p class="role-note">
+            Choose your role carefully. It cannot be changed later.
+        </p>
+
+        <div class="btn-group">
+
+            <button type="submit" class="sub">
+                Register
+            </button>
+
+            <button type="reset" class="clr">
+                Clear
+            </button>
+
+        </div>
+
+        <div class="login-link">
+            Already have an account?
+            <a href="{% url 'login_page' %}">
+                Login
+            </a>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+
+document.getElementById("phone").addEventListener("input", function(){
+
+    this.value = this.value.replace(/[^0-9]/g,'');
+
+    if(this.value.length > 10){
+        this.value = this.value.slice(0,10);
+    }
+
+});
+
+</script>
+
+</body>
+</html>
+```

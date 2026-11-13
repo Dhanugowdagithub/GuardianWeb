@@ -1,0 +1,46 @@
+{% extends "guardianwebapp/base.html" %}
+{% block content %}
+<div class="container" style="max-width:700px; margin:20px auto;">
+    <h2 style="color:white; background:#6941C6; padding:16px; border-radius:8px 8px 0 0;">📍 Nearby Alerts <small style="font-size:14px; font-weight:normal;">(within 2km)</small></h2>
+
+    <div style="background:white; border-radius:0 0 8px 8px; padding:20px;">
+
+        {% if nearby_alerts %}
+            {% for alert in nearby_alerts %}
+            <div style="border-left:5px solid #e0405a; background:#FDECEC; border-radius:8px; padding:16px; margin-bottom:14px;">
+                <strong>{{ alert.user.username }}</strong>
+
+                <p style="color:#c0392b; margin:6px 0;">🔴 No one has accepted this alert yet</p>
+
+                <p style="margin:6px 0;">
+                    📍
+                    {% if alert.address %}
+                        {{ alert.address }}
+                    {% else %}
+                        Address available
+                    {% endif %}
+                    {% if alert.latitude and alert.longitude %}
+                        — <a href="https://www.google.com/maps?q={{ alert.latitude }},{{ alert.longitude }}" target="_blank">View map</a>
+                    {% endif %}
+                </p>
+
+                <p style="font-size:12px; color:gray;">{{ alert.created_at|date:"M d, Y, g:i A" }}</p>
+
+                <form method="POST" action="{% url 'accept_nearby_alert' alert.id %}" style="margin-top:10px;">
+                    {% csrf_token %}
+                    <button type="submit"
+                            style="background:#f39c12; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">
+                        Accept Alert
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:gray;">No alerts within 2km right now.</p>
+        {% endif %}
+
+        <a href="{% url 'volunteer_dashboard' %}" style="display:block; text-align:center; margin-top:16px;">← Back to Dashboard</a>
+
+    </div>
+</div>
+{% endblock %}

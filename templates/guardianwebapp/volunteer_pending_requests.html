@@ -1,0 +1,98 @@
+{% extends "guardianwebapp/base.html" %}
+{% block content %}
+<div class="container" style="max-width:700px; margin:20px auto;">
+    <h2 style="color:white; background:#6941C6; padding:16px; border-radius:8px 8px 0 0;">🚨 Pending Emergency Requests</h2>
+
+    <div style="background:white; border-radius:0 0 8px 8px; padding:20px;">
+
+        {% if requests %}
+            {% for req in requests %}
+            <div style="border-left:5px solid #e0405a; background:#FDECEC; border-radius:8px; padding:16px; margin-bottom:14px;">
+                <strong>{{ req.user.username }}</strong>
+
+                {% if req.accepted_by %}
+                    <p id="status-area-{{ req.id }}" style="color:#f39c12; font-weight:600; margin:6px 0;">🟠 Accepted by {{ req.accepted_by.user.username }} — ongoing</p>
+                {% else %}
+                    <p id="status-area-{{ req.id }}" style="color:#c0392b; margin:6px 0;">🔴 No one has accepted this alert yet</p>
+                {% endif %}
+
+                <p style="margin:6px 0;">
+                    📍
+                    {% if req.address %}
+                        {{ req.address }}
+                    {% else %}
+                        Location available
+                    {% endif %}
+                    {% if req.latitude and req.longitude %}
+                        — <a href="https://www.google.com/maps?q={{ req.latitude }},{{ req.longitude }}" target="_blank">View map</a>
+                    {% endif %}
+                </p>
+
+                <p style="margin:6px 0; font-size:13px; color:#555;">
+                    <strong>Assigned Guardian(s):</strong>
+                    {% if req.session and req.session.guardian_links.all %}
+                        {% for link in req.session.guardian_links.all %}
+                            {{ link.guardian.get_full_name|default:link.guardian.username|default:link.viewer_name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span style="color:gray;">No guardian assigned</span>
+                    {% endif %}
+                </p>
+
+                {% if req.transcript %}
+                    <p style="margin:6px 0; font-style:italic;">🗣️ "{{ req.transcript }}"</p>
+                {% endif %}
+
+                <p style="font-size:12px; color:gray;">{{ req.created_at|date:"M d, Y, g:i A" }}</p>
+
+                {% if not req.accepted_by %}
+                <div style="margin-top:10px;" id="accept-area-{{ req.id }}">
+                    <button type="button" onclick="acceptRequest({{ req.id }})"
+                            style="background:#f39c12; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">
+                        Accept Request
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:gray;">✅ No pending emergency requests.</p>
+        {% endif %}
+
+        <a href="{% url 'volunteer_dashboard' %}" style="display:block; text-align:center; margin-top:16px;">← Back to Dashboard</a>
+
+    </div>
+</div>
+<script>
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+}
+
+function acceptRequest(reqId) {
+    fetch(`/volunteer/emergency-requests/${reqId}/accept/`, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") }
+    })
+    .then(res => res.json())
+    .then(data => {
+        const area = document.getElementById(`accept-area-${reqId}`);
+        const statusArea = document.getElementById(`status-area-${reqId}`);
+        if (data.success) {
+            if (statusArea) {
+                statusArea.style.color = "#f39c12";
+                statusArea.style.fontWeight = "600";
+                statusArea.innerHTML = `🟠 Accepted by ${data.accepted_by} — ongoing`;
+            }
+            if (area) area.style.display = "none";
+        } else {
+            if (area) area.innerHTML = `<p style="color:gray; margin:0;">${data.message}</p>`;
+        }
+    })
+    .catch(() => {
+        alert("Failed to accept request. Please try again.");
+    });
+}
+</script>
+{% endblock %}

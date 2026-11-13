@@ -1,0 +1,433 @@
+{% extends "guardianwebapp/base.html" %}
+{% block title %}Live Watch – Tracking{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+body { padding:0; margin:0; }
+#layout { display:grid; grid-template-columns:340px 1fr; height:100vh; }
+#sidebar { background:var(--navy2); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+#map { width:100%; height:100%; }
+
+.sb-header { padding:20px; border-bottom:1px solid var(--border); }
+.sb-header h2 { font-size:16px; font-weight:700; margin-bottom:2px; }
+.sb-header .dest { font-size:13px; color:var(--muted); }
+.status-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:99px; font-size:12px; font-weight:600; margin-top:8px; }
+.status-active   { background:#0f3a2a; color:var(--sage); border:1px solid var(--sage); }
+.status-danger   { background:#3a0f1a; color:var(--rose); border:1px solid var(--rose); }
+.status-safe     { background:#0f2a1f; color:#7ee8b8; border:1px solid #7ee8b8; }
+.pulse { width:8px; height:8px; border-radius:50%; background:var(--sage); animation: p 1.2s ease infinite; }
+.pulse.red { background:var(--rose); }
+@keyframes p { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(1.4);} }
+
+.sb-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+
+.share-box { background:var(--navy); border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; }
+.share-code { font-size:28px; font-weight:800; letter-spacing:6px; color:var(--purple-l); margin:4px 0; }
+.share-sub { font-size:11px; color:var(--muted); }
+
+.section-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; }
+
+.cp-item { display:flex; align-items:center; gap:10px; padding:10px; background:var(--navy); border-radius:8px; border:1px solid var(--border); font-size:13px; }
+.cp-dot { width:10px; height:10px; border-radius:50%; background:var(--border); flex-shrink:0; }
+.cp-dot.done { background:var(--sage); }
+.cp-name { flex:1; }
+.cp-status { font-size:11px; color:var(--muted); }
+
+.danger-item { background:#3a0f1a; border:1px solid var(--rose); border-radius:8px; padding:12px; font-size:13px; }
+.danger-level { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--rose); margin-bottom:4px; }
+.danger-desc { color:#f08ca0; line-height:1.4; }
+
+.info-row { display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--border); }
+.info-row:last-child { border:none; }
+.info-label { color:var(--muted); }
+.info-val { font-weight:600; }
+
+.sb-footer { padding:16px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px; }
+.btn-safe { padding:12px; background:linear-gradient(135deg,var(--sage),#2d8a5e); color:#fff; font-size:14px; font-weight:700; border:none; border-radius:10px; cursor:pointer; }
+.btn-sos  { padding:12px; background:linear-gradient(135deg,var(--rose),#a01a35); color:#fff; font-size:15px; font-weight:800; border:none; border-radius:10px; cursor:pointer; letter-spacing:1px; }
+.btn-sos:active { transform:scale(.97); }
+
+.conn-badge { text-align:center; font-size:11px; padding:4px; border-radius:6px; }
+.conn-ok  { background:#0f3a2a; color:var(--sage); }
+.conn-err { background:#3a0f1a; color:var(--rose); }
+
+@media(max-width:700px){
+  #layout { grid-template-columns:1fr; grid-template-rows:auto 1fr; }
+  #map { height:55vh; }
+  #sidebar { max-height:45vh; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="layout">
+  <!-- ── Sidebar ── -->
+  <div id="sidebar">
+    <div class="sb-header">
+      <h2>{{ session.title }}</h2>
+      <div class="dest">→ {{ session.destination_name|default:"Destination" }}</div>
+      <div class="status-badge status-active" id="statusBadge">
+        <div class="pulse" id="pulseEl"></div>
+        <span id="statusText">Live</span>
+      </div>
+    </div>
+
+    <div class="sb-body">
+      <div class="share-box">
+        <div class="share-sub">Share code for guardians</div>
+        <div class="share-code">{{ session.share_code }}</div>
+        <div class="share-sub">guardian can watch at /watch/code/{{ session.share_code }}/</div>
+      </div>
+
+      <div>
+        <div class="section-title">Journey info</div>
+
+        <div class="info-row">
+          <span class="info-label">Started</span>
+          <span class="info-val" id="startedAt">–</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Elapsed</span>
+          <span class="info-val" id="elapsed">–</span>
+        </div>
+
+      <div class="info-row">
+    <span class="info-label">Expected</span>
+    <span class="info-val" id="expected">{{ session.expected_duration }} min</span>
+</div>
+
+        <div class="info-row">
+          <span class="info-label">Distance</span>
+          <span class="info-val" id="distance">--</span>
+        </div>
+
+<!--      <div class="info-row">
+          <span class="info-label">Duration</span>
+          <span class="info-val" id="duration">--</span>
+        </div>
+-->  
+
+        <div class="info-row">
+          <span class="info-label">Speed</span>
+          <span class="info-val" id="speed">0 km/h</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Accuracy</span>
+          <span class="info-val" id="accuracy">-</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Checkpoints</div>
+        <div id="cpContainer">
+          {% for cp in session.checkpoints.all %}
+          <div class="cp-item" id="cp-{{ cp.pk }}">
+            <div class="cp-dot {% if cp.confirmed %}done{% endif %}" id="cpDot-{{ cp.pk }}"></div>
+            <div class="cp-name">{{ cp.name }}</div>
+            {% if cp.confirmed %}
+              <div class="cp-status">✓ {{ cp.confirmed_at|time:"H:i" }}</div>
+            {% else %}
+              <div class="cp-status">
+                <button onclick="confirmCheckpoint({{ cp.pk }})"
+                  style="background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">
+                  Confirm
+                </button>
+              </div>
+            {% endif %}
+          </div>
+          {% empty %}
+          <div style="font-size:13px;color:var(--muted);">No checkpoints added.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="dangerSection" style="display:none">
+        <div class="section-title" style="color:var(--rose);">⚠️ Alerts</div>
+        <div id="dangerList"></div>
+      </div>
+    </div>
+
+    <div class="sb-footer">
+      <div class="conn-badge conn-err" id="connBadge">Connecting…</div>
+      <button class="btn-safe" onclick="confirmArrived()">✅ I've Arrived Safely</button>
+      <button class="btn-sos"  onclick="triggerSOS()">🆘 SOS</button>
+    </div>
+  </div>
+
+  <!-- ── Map ── -->
+  <div id="map"></div>
+</div>
+<div id="arrivedModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:9999;">
+  <div style="background:var(--navy2); border-radius:12px; padding:24px; max-width:320px; text-align:center;">
+    <h3 style="margin-bottom:12px;">Have you arrived safely?</h3>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:20px;">Do you want to stop sharing your location, or keep sharing?</p>
+    <div style="display:flex; gap:10px;">
+      <form method="POST" action="{% url 'end_session' session.id %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" class="btn-safe" style="width:100%;">Stop Sharing</button>
+      </form>
+      <button class="btn-sm" style="flex:1;" onclick="keepSharingConfirmed()">Keep Sharing</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SESSION_ID   = {{ session.pk }};
+const WS_PROTOCOL  = window.location.protocol === "https:" ? "wss:" : "ws:";
+const WS_URL       = `${WS_PROTOCOL}//${window.location.host}/ws/guardianwebapp/track/{{ session.pk }}/`;
+const CHECKPOINTS  = {{ checkpoints_json|safe }};
+const STARTED_AT   = new Date("{{ session.started_at.isoformat }}");
+const EXPECTED_MIN = {{ session.expected_duration }};
+const ORIGIN       = [{{ session.origin_lat|default:12.9716 }}, {{ session.origin_lng|default:77.5946 }}];
+const DESTINATION  = [{{ session.destination_lat|default:12.9716 }}, {{ session.destination_lng|default:77.5946 }}];
+
+let ws, watchId;
+let userMarker, trail = [], trailLine;
+let map, routeLine;
+let sessionStopped = false;
+
+// ── WebSocket ───────────────────────────────────────────────────────────────
+function connectWS() {
+    console.log("Connecting to:", WS_URL);
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = () => {
+        console.log("WebSocket Connected");
+        document.getElementById("connBadge").textContent = "🟢 Connected";
+        document.getElementById("connBadge").className = "conn-badge conn-ok";
+        startGPS();
+    };
+
+    ws.onmessage = (e) => {
+        console.log("Message:", e.data);
+        handleWsMessage(JSON.parse(e.data));
+    };
+
+    ws.onerror = (e) => console.log("WebSocket Error", e);
+
+    ws.onclose = () => {
+        console.log("WebSocket Closed");
+        document.getElementById("connBadge").textContent = "🔴 Disconnected – reconnecting…";
+        document.getElementById("connBadge").className = "conn-badge conn-err";
+        stopGPS();
+        if (!sessionStopped) setTimeout(connectWS, 4000);
+    };
+}
+
+function handleWsMessage(msg) {
+    if (msg.type === 'gps_ack') {
+        if (msg.any_danger) showDangerUI();
+    } else if (msg.type === 'checkpoint_confirmed') {
+        markCheckpointDone(msg.checkpoint.id, msg.checkpoint.confirmed_at);
+    } else if (msg.type === 'sos_alert') {
+        showDangerUI(true);
+    } else if (msg.type === 'session_ended') {
+        sessionStopped = true;
+        stopGPS();
+        if (ws) ws.close();
+        alert("Session ended. You're marked as safe.");
+        window.location.href = '/user_dashboard/';
+    }
+}
+
+// ── GPS ─────────────────────────────────────────────────────────────────────
+function startGPS() {
+    if (!navigator.geolocation) return alert('Geolocation not supported.');
+    watchId = navigator.geolocation.watchPosition(
+        pos => sendGPS(pos),
+        err => console.warn('GPS error', err),
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+}
+
+function stopGPS() {
+    if (watchId !== undefined) navigator.geolocation.clearWatch(watchId);
+}
+
+function sendGPS(pos) {
+    const { latitude: lat, longitude: lng, accuracy, altitude, speed, heading } = pos.coords;
+
+    updateMap(lat, lng);
+
+    // Use browser-reported speed if available, otherwise calculate manually
+    let displaySpeed = speed;
+    if (displaySpeed == null) {
+        displaySpeed = calculateSpeed(lat, lng, pos.timestamp);
+    }
+
+    document.getElementById("speed").textContent =
+        displaySpeed != null ? (displaySpeed * 3.6).toFixed(1) + " km/h" : "0 km/h";
+
+    document.getElementById("accuracy").textContent =
+        accuracy != null ? "±" + Math.round(accuracy) + " m" : "--";
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: "gps_update",
+            latitude: lat, longitude: lng,
+            accuracy: accuracy, altitude: altitude,
+            speed: displaySpeed,
+            heading: heading
+        }));
+    }
+}
+// ── Map (Leaflet, free) ───────────────────────────────────────────────────────
+function initMap() {
+    map = L.map('map').setView(ORIGIN, 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    L.marker(ORIGIN).addTo(map).bindPopup("Start");
+    L.marker(DESTINATION).addTo(map).bindPopup("Destination");
+
+    // Route + distance/duration via free OSRM
+    fetch(`https://router.project-osrm.org/route/v1/driving/${ORIGIN[1]},${ORIGIN[0]};${DESTINATION[1]},${DESTINATION[0]}?overview=full&geometries=geojson`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+            routeLine = L.polyline(coords, { color: "#2196F3", weight: 4 }).addTo(map);
+            map.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
+
+            const distanceKm = (route.distance / 1000).toFixed(1);
+            const durationMin = Math.round(route.duration / 60);
+
+            document.getElementById("distance").innerHTML = `${distanceKm} km`;
+            document.getElementById("duration").innerHTML = `${durationMin} min`;
+            document.getElementById("expected").innerHTML = `${durationMin} min`;
+
+            fetch("{% url 'update_expected_duration' session.id %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: `minutes=${durationMin}`
+            });
+        }
+    })
+    .catch(err => console.error("Routing error:", err));
+
+    CHECKPOINTS.forEach(function(cp, i) {
+        L.marker([cp.lat, cp.lng]).addTo(map).bindPopup(`Checkpoint ${i + 1}`);
+    });
+
+    trailLine = L.polyline([], { color: "#00FF00", weight: 4 }).addTo(map);
+
+    connectWS();
+}
+
+function updateMap(lat, lng) {
+    const pos = [lat, lng];
+    trail.push(pos);
+    trailLine.addLatLng(pos);
+
+    if (!userMarker) {
+        userMarker = L.circleMarker(pos, {
+            radius: 8,
+            fillColor: "#2196F3",
+            color: "#fff",
+            weight: 2,
+            fillOpacity: 1
+        }).addTo(map).bindPopup("You");
+    } else {
+        userMarker.setLatLng(pos);
+    }
+
+    map.panTo(pos);
+}
+
+// ── Checkpoints ───────────────────────────────────────────────────────────────
+function confirmCheckpoint(cpId) {
+    if (ws && ws.readyState === WebSocket.OPEN)
+        ws.send(JSON.stringify({ type: 'checkpoint_confirm', checkpoint_id: cpId }));
+}
+
+function markCheckpointDone(cpId, confirmedAt) {
+    const dot = document.getElementById(`cpDot-${cpId}`);
+    if (dot) dot.classList.add('done');
+}
+
+// ── SOS / Arrived ─────────────────────────────────────────────────────────────
+function triggerSOS() {
+    if (!confirm('⚠️ Send SOS alert to all guardians?')) return;
+    const note = "";
+    if (ws && ws.readyState === WebSocket.OPEN)
+        ws.send(JSON.stringify({ type: 'sos', note }));
+    showDangerUI(true);
+    window.location.href = "{% url 'sos_sent' %}";
+}
+
+
+function confirmArrived() {
+    document.getElementById("arrivedModal").style.display = "flex";
+}
+
+function keepSharingConfirmed() {
+    document.getElementById("arrivedModal").style.display = "none";
+}
+
+function showDangerUI(isSOS = false) {
+    document.getElementById('statusBadge').className = 'status-badge status-danger';
+    document.getElementById('statusText').textContent = isSOS ? 'SOS!' : 'Alert';
+    document.getElementById('pulseEl').classList.add('red');
+    document.getElementById('dangerSection').style.display = 'block';
+    if (isSOS) {
+        const list = document.getElementById('dangerList');
+        list.innerHTML = `<div class="danger-item"><div class="danger-level">CRITICAL</div><div class="danger-desc">SOS triggered. Guardians have been notified.</div></div>`;
+    }
+}
+
+// ── Elapsed timer ──────────────────────────────────────────────────────────────
+function updateElapsed() {
+    const now = new Date();
+    const diffMin = Math.floor((now - STARTED_AT) / 60000);
+    document.getElementById('elapsed').textContent = `${diffMin} min`;
+    document.getElementById('startedAt').textContent = STARTED_AT.toLocaleTimeString();
+    if (diffMin > EXPECTED_MIN + 10)
+        document.getElementById('elapsed').style.color = 'var(--rose)';
+}
+setInterval(updateElapsed, 10000);
+updateElapsed();
+
+document.addEventListener("DOMContentLoaded", initMap);
+
+let lastPosition = null;
+let lastTimestamp = null;
+
+function calculateSpeed(lat, lng, timestamp) {
+    if (!lastPosition) {
+        lastPosition = { lat, lng };
+        lastTimestamp = timestamp;
+        return null;
+    }
+
+    const R = 6371000; // meters
+    const dLat = (lat - lastPosition.lat) * Math.PI / 180;
+    const dLng = (lng - lastPosition.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2) ** 2 +
+              Math.cos(lastPosition.lat * Math.PI/180) * Math.cos(lat * Math.PI/180) *
+              Math.sin(dLng/2) ** 2;
+    const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); // meters
+
+    const timeDiffSec = (timestamp - lastTimestamp) / 1000;
+    const speedMps = timeDiffSec > 0 ? distance / timeDiffSec : 0;
+
+    lastPosition = { lat, lng };
+    lastTimestamp = timestamp;
+
+    return speedMps; // meters per second
+}
+</script>
+{% endblock %}

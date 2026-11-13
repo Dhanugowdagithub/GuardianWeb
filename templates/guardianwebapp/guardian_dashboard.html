@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guardian Dashboard</title>
+<style>
+:root {
+  --primary: #6c4bc9;
+  --primary-dark: #533a9e;
+  --safe: #2f9e44;
+  --danger: #e03131;
+  --bg: #f5f3ff;
+  --card-bg: #ffffff;
+  --border: #e5e0f7;
+}
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Arial, sans-serif; }
+body { background: var(--bg); min-height:100vh; }
+
+.header {
+  background: var(--primary);
+  color: white;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-title { font-size: 18px; font-weight: 600; }
+.hamburger {
+  background: none; border: none; color: white;
+  font-size: 26px; cursor: pointer; line-height: 1;
+}
+
+.menu-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+}
+.menu-overlay.open { display: block; }
+
+.side-menu {
+  position: fixed; top:0; right:-280px;
+  width: 260px; height: 100%;
+  background: white;
+  box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+  transition: right 0.25s ease;
+  z-index: 201;
+  display: flex; flex-direction: column;
+  padding: 20px 0;
+}
+.side-menu.open { right: 0; }
+.menu-item {
+  padding: 14px 22px;
+  display: flex; align-items: center; gap: 12px;
+  color: #333; text-decoration: none; font-size: 15px;
+}
+.menu-item:hover { background: var(--bg); }
+.menu-close {
+  align-self: flex-end; margin: 0 15px 10px 0;
+  background:none; border:none; font-size:22px; cursor:pointer; color:#666;
+}
+
+.container { max-width: 600px; margin: 0 auto; padding: 20px 16px 40px; }
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.card-title {
+  font-size: 15px; font-weight: 600; color: #333;
+  margin-bottom: 14px; display:flex; align-items:center; gap:8px;
+}
+
+.watched-user {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.watched-user:last-child { border-bottom: none; }
+.wu-left { display: flex; align-items: center; gap: 12px; }
+.wu-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #EEEDFE; color: var(--primary-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: 15px;
+}
+.wu-name { font-size: 15px; font-weight: 500; color: #222; }
+.wu-status { font-size: 12px; margin-top: 2px; }
+.status-safe { color: var(--safe); }
+.status-danger { color: var(--danger); font-weight: 600; }
+.status-inactive { color: #888; }
+
+.badge {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600;
+}
+.badge-safe { background: #e6f7ea; color: var(--safe); }
+.badge-danger { background: #fdeaea; color: var(--danger); animation: pulse 1.5s infinite; }
+.badge-inactive { background: #f0f0f0; color: #888; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+.wu-actions { display: flex; gap: 8px; }
+.btn-sm {
+  padding: 7px 12px; font-size: 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: white; color: #444;
+  text-decoration: none; cursor: pointer;
+}
+.btn-sm:hover { background: var(--bg); }
+.btn-primary-sm { background: var(--primary); color: white; border-color: var(--primary); }
+.btn-primary-sm:hover { background: var(--primary-dark); }
+
+.empty-state { text-align: center; color: #888; padding: 30px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">🛡️ Guardian Dashboard</div>
+  <button class="hamburger" onclick="toggleMenu()">☰</button>
+</div>
+
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+<div class="side-menu" id="sideMenu">
+  <button class="menu-close" onclick="toggleMenu()">✕</button>
+  <a href="{% url 'profile_settings' %}" class="menu-item">👤 My Profile</a>
+  <a href="{% url 'emergency_alert_view' %}" class="menu-item">🚨 SOS Alerts</a>
+  <a href="{% url 'guardian_dashboard' %}" class="menu-item">🏠 Dashboard</a>
+  <a href="{% url 'logout' %}" class="menu-item" style="color:#e03131;">🚪 Logout</a>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">🚨 Emergency Alerts</div>
+    <a href="{% url 'guardian_emergency_alerts' %}" class="btn-sm btn-primary-sm" style="width:100%; display:block; text-align:center; padding:12px;">
+      View SOS Alerts
+    </a>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📍 Travel Monitoring</div>
+    <a href="{% url 'travel_monitoring' %}" class="btn-sm btn-primary-sm" style="width:100%; display:block; text-align:center; padding:12px;">
+      Track Journeys
+    </a>
+  </div>
+
+</div>
+
+<script>
+function toggleMenu() {
+  document.getElementById('sideMenu').classList.toggle('open');
+  document.getElementById('menuOverlay').classList.toggle('open');
+}
+</script>
+
+</body>
+</html>

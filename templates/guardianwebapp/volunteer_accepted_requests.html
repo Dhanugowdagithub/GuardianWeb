@@ -1,0 +1,53 @@
+{% extends "guardianwebapp/base.html" %}
+{% block content %}
+<div class="container" style="max-width:700px; margin:20px auto;">
+    <h2 style="color:white; background:#6941C6; padding:16px; border-radius:8px 8px 0 0;">✅ Accepted Requests</h2>
+
+    <div style="background:white; border-radius:0 0 8px 8px; padding:20px;">
+
+        {% if accepted_requests %}
+            {% for req in accepted_requests %}
+            <div style="border-left:5px solid #f39c12; background:#FEF6E7; border-radius:8px; padding:16px; margin-bottom:14px;">
+                <strong>{{ req.user.username }}</strong>
+
+                <p style="color:#f39c12; font-weight:600; margin:6px 0;">🟠 Accepted by {{ req.accepted_by.user.username }} — ongoing</p>
+
+                <p style="margin:6px 0;">
+                    📍
+                    {% if req.address %}
+                        {{ req.address }}
+                    {% else %}
+                        Location available
+                    {% endif %}
+                    {% if req.latitude and req.longitude %}
+                        — <a href="https://www.google.com/maps?q={{ req.latitude }},{{ req.longitude }}" target="_blank">View map</a>
+                    {% endif %}
+                </p>
+
+                <p style="margin:6px 0; font-size:13px; color:#555;">
+                    <strong>Assigned Guardian(s):</strong>
+                    {% if req.session and req.session.guardian_links.all %}
+                        {% for link in req.session.guardian_links.all %}
+                            {{ link.guardian.get_full_name|default:link.guardian.username|default:link.viewer_name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span style="color:gray;">No guardian assigned</span>
+                    {% endif %}
+                </p>
+
+                {% if req.transcript %}
+                    <p style="margin:6px 0; font-style:italic;">🗣️ "{{ req.transcript }}"</p>
+                {% endif %}
+
+                <p style="font-size:12px; color:gray;">{{ req.created_at|date:"M d, Y, g:i A" }}</p>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:gray;">No requests accepted yet.</p>
+        {% endif %}
+
+        <a href="{% url 'volunteer_dashboard' %}" style="display:block; text-align:center; margin-top:16px;">← Back to Dashboard</a>
+
+    </div>
+</div>
+{% endblock %}

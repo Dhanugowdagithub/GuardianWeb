@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GuardianWeb — Welcome</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            background-color: rgb(234, 242, 239);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background-color: white;
+            width: 360px;
+            padding: 48px 32px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px grey;
+            text-align: center;
+        }
+
+        .logo-circle {
+            width: 64px;
+            height: 64px;
+            background-color: #dceee8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 28px;
+        }
+
+        h2.title {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        p.tagline {
+            font-size: 14px;
+            color: #444;
+            margin-bottom: 8px;
+        }
+
+        p.description {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            margin: 16px 0 32px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: #1f4fd8;
+            color: white;
+            box-shadow: 0 2px 10px darkblue;
+            margin-bottom: 14px;
+        }
+
+        .btn-primary:hover {
+            background-color: #173dab;
+        }
+
+        .login-text {
+            font-size: 13px;
+            color: #555;
+        }
+
+        .login-text a {
+            color: #1f4fd8;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .login-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="logo-circle">🛡️</div>
+
+        <h2 class="title"><u>GuardianWeb</u></h2>
+        <p class="tagline"><i>Safety that travels with you. Presence that stays with you.</i></p>
+
+        <p class="description">
+            A real-time women's safety platform that keeps your trusted circle close, wherever you go.
+        </p>
+
+        <form method="GET" action="{% url 'register' %}">
+            <button type="submit" class="btn-primary">Create an account</button>
+        </form>
+
+        <p class="login-text">
+            Already have an account? <a href="{% url 'login' %}">Log in</a>
+        </p>
+    </div>
+
+</body>
+</html>
